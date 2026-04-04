@@ -6,7 +6,9 @@ import Constants from "expo-constants";
  * Falls back to EXPO_PUBLIC_API_URL when both point at the same Next server.
  */
 export function getWebBase(): string {
-  const fromEnv = process.env.EXPO_PUBLIC_WEB_URL?.trim().replace(/\/$/, "");
+  const fromEnv =
+    process.env.EXPO_PUBLIC_WEB_URL?.trim().replace(/\/$/, "") ||
+    process.env.NEXT_PUBLIC_WEB_URL?.trim().replace(/\/$/, "");
   if (fromEnv) return fromEnv;
 
   const extra = Constants.expoConfig?.extra as { webUrl?: string; apiUrl?: string } | undefined;
@@ -14,6 +16,7 @@ export function getWebBase(): string {
 
   const api =
     process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/$/, "") ||
+    process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/$/, "") ||
     extra?.apiUrl?.trim().replace(/\/$/, "");
   if (api) return api;
 

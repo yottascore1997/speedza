@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { api } from "@/lib/api";
 import { addToCart } from "@/lib/cart";
@@ -28,6 +28,7 @@ type Product = {
 type Category = { id: string; name: string; products: Product[] };
 
 export default function StoreDetailScreen() {
+  const router = useRouter();
   const params = useLocalSearchParams<{ id: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const [name, setName] = useState("");
@@ -68,6 +69,8 @@ export default function StoreDetailScreen() {
       name: p.name,
       price: priceNum(p),
       quantity: 1,
+      storeName: name,
+      imageUrl: p.imageUrl ?? null,
     });
     Alert.alert("Added", `${p.name} added to cart`);
   }
@@ -102,49 +105,45 @@ export default function StoreDetailScreen() {
                   gap: 12,
                 }}
               >
-                <View
-                  style={{
-                    width: 72,
-                    height: 72,
-                    borderRadius: 12,
-                    backgroundColor: theme.slateLine,
-                    overflow: "hidden",
-                  }}
+                <Pressable
+                  onPress={() => router.push(`/product/${p.id}`)}
+                  style={{ flexDirection: "row", gap: 12, flex: 1 }}
                 >
-                  {img ? (
-                    <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
-                  ) : null}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "800", color: theme.text }}>{p.name}</Text>
-                  <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 4 }} numberOfLines={2}>
-                    {p.description}
-                  </Text>
                   <View
                     style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginTop: 8,
+                      width: 72,
+                      height: 72,
+                      borderRadius: 12,
+                      backgroundColor: theme.slateLine,
+                      overflow: "hidden",
                     }}
                   >
-                    <Text style={{ fontWeight: "900", color: theme.primary, fontSize: 16 }}>
-                      ₹{Math.round(priceNum(p) * 100) / 100}
-                    </Text>
-                    <Pressable
-                      onPress={() => void add(p)}
-                      style={{
-                        backgroundColor: theme.accent,
-                        paddingHorizontal: 14,
-                        paddingVertical: 8,
-                        borderRadius: 10,
-                      }}
-                    >
-                      <Text style={{ color: "#fff", fontWeight: "800" }}>Add</Text>
-                    </Pressable>
+                    {img ? (
+                      <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+                    ) : null}
                   </View>
-                  <Text style={{ fontSize: 11, color: theme.textDim, marginTop: 4 }}>Stock: {p.stock}</Text>
-                </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: "800", color: theme.text }}>{p.name}</Text>
+                    <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 4 }} numberOfLines={2}>
+                      {p.description}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: theme.textDim, marginTop: 4 }}>Stock: {p.stock}</Text>
+                  </View>
+                </Pressable>
+                <Pressable
+                  onPress={() => void add(p)}
+                  style={{
+                    alignSelf: "center",
+                    backgroundColor: theme.accent,
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    borderRadius: 10,
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontWeight: "900" }}>
+                    Add · ₹{Math.round(priceNum(p) * 100) / 100}
+                  </Text>
+                </Pressable>
               </View>
             );
           })}
