@@ -1,0 +1,7 @@
+# Files not needed on EAS workers (also covered by .gitignore; explicit for clarity)
+node_modules
+.expo
+dist
+*.log
+.DS_Store
+Thumbs.db

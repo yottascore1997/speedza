@@ -2,7 +2,7 @@ import Constants from "expo-constants";
 
 /**
  * Base URL of the Next.js app (`delivery-web`). No trailing slash.
- * Set EXPO_PUBLIC_WEB_URL in .env (e.g. https://your-domain.com) or `extra.webUrl` in app.json.
+ * Set EXPO_PUBLIC_WEB_URL in .env (e.g. https://your-domain.com) or `extra.webUrl` in app.config.js.
  * Falls back to EXPO_PUBLIC_API_URL when both point at the same Next server.
  */
 export function getWebBase(): string {

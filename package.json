@@ -14,7 +14,6 @@
     "expo": "~52.0.20",
     "expo-asset": "~11.0.5",
     "expo-constants": "~17.0.3",
-    "expo-firebase-recaptcha": "^2.3.1",
     "expo-font": "~13.0.4",
     "expo-image": "~2.0.7",
     "expo-image-picker": "~16.0.6",

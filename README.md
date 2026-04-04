@@ -1,10 +1,10 @@
-# DLF Delivery — Expo (native)
+# Speedza — Expo (native)
 
 React Native app that talks to the same **`delivery-web`** APIs (`EXPO_PUBLIC_API_URL`).
 
 ## Env
 
-Create `.env` in this folder (or use `app.json` → `extra.apiUrl`):
+Create `.env` in this folder (or set `extra.apiUrl` in `app.config.js`):
 
 ```env
 EXPO_PUBLIC_API_URL=https://your-deployed-next-app.com

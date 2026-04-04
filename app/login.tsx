@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, createElement } from "react";
 import {
   View,
   Text,
@@ -21,12 +21,16 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api, getApiBase, getToken, setSession } from "@/lib/api";
 import { theme } from "@/lib/theme";
-import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
 import {
+  RecaptchaVerifier,
   signInWithPhoneNumber,
   type ConfirmationResult,
 } from "firebase/auth";
 import { getFirebaseApp, getFirebaseAuth } from "@/lib/firebase-client";
+import {
+  FirebasePhoneAuthWebView,
+  type FirebasePhoneAuthWebHandle,
+} from "@/components/FirebasePhoneAuthWebView";
 
 const LOGIN_BG = require("../public/images/loginbg.jpeg");
 
@@ -60,6 +64,7 @@ export default function LoginScreen() {
   const [onboardLng, setOnboardLng] = useState<number | null>(null);
   const [onboardImageUri, setOnboardImageUri] = useState<string | null>(null);
   const [savingOnboard, setSavingOnboard] = useState(false);
+  const authBridgeRef = useRef<FirebasePhoneAuthWebHandle>(null);
 
   function normalizePhone10(raw: string) {
     const digits = raw.replace(/\D/g, "");
@@ -95,12 +100,15 @@ export default function LoginScreen() {
       }
       const digits = phone.replace(/\D/g, "");
       const e164 = digits.startsWith("91") ? `+${digits}` : `+91${digits}`;
-      const result = await signInWithPhoneNumber(
-        getFirebaseAuth(),
-        e164,
-        (global as any).recaptchaVerifier,
-      );
-      setConfirm(result);
+      if (Platform.OS === "web") {
+        const auth = getFirebaseAuth();
+        const verifier = new RecaptchaVerifier(auth, "recaptcha-container", { size: "invisible" });
+        const result = await signInWithPhoneNumber(auth, e164, verifier);
+        setConfirm(result);
+      } else {
+        setConfirm(null);
+        await authBridgeRef.current?.sendOtp(e164);
+      }
       setStep(2);
       Alert.alert("OTP sent", "Enter the code you received by SMS.");
     } catch (e: any) {
@@ -116,15 +124,25 @@ export default function LoginScreen() {
   }
 
   async function verify() {
-    if (!confirm) {
+    if (Platform.OS === "web" && !confirm) {
+      Alert.alert("Session expired", "Please request OTP again.");
+      setStep(1);
+      return;
+    }
+    if (Platform.OS !== "web" && !authBridgeRef.current) {
       Alert.alert("Session expired", "Please request OTP again.");
       setStep(1);
       return;
     }
     setLoading(true);
     try {
-      const cred = await confirm.confirm(otp);
-      const idToken = await cred.user.getIdToken();
+      let idToken: string;
+      if (Platform.OS === "web") {
+        const cred = await confirm!.confirm(otp);
+        idToken = await cred.user.getIdToken();
+      } else {
+        idToken = await authBridgeRef.current!.verifyOtp(otp);
+      }
       const res = await api<{
         token: string;
         needsProfile?: boolean;
@@ -447,12 +465,23 @@ export default function LoginScreen() {
       style={{ flex: 1, backgroundColor: theme.screenBg }}
     >
       <StatusBar style="dark" />
-      <FirebaseRecaptchaVerifierModal
-        ref={(ref) => {
-          (global as any).recaptchaVerifier = ref;
-        }}
-        firebaseConfig={getFirebaseApp().options as any}
-      />
+      {Platform.OS === "web"
+        ? createElement("div", {
+            id: "recaptcha-container",
+            style: { position: "fixed", left: -9999, width: 1, height: 1, overflow: "hidden" },
+          })
+        : null}
+      {Platform.OS !== "web" ? (
+        <FirebasePhoneAuthWebView
+          ref={authBridgeRef}
+          firebaseConfig={{
+            apiKey: getFirebaseApp().options.apiKey,
+            authDomain: getFirebaseApp().options.authDomain ?? "",
+            projectId: getFirebaseApp().options.projectId ?? "",
+            appId: getFirebaseApp().options.appId ?? "",
+          }}
+        />
+      ) : null}
 
       <View style={{ flex: 1 }}>
         {heroSection}
