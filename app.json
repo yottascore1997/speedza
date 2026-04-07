@@ -1,19 +1,21 @@
 {
   "expo": {
-    "name": "DLF Delivery",
-    "slug": "dlf-delivery",
+    "name": "Speedza",
+    "slug": "speedza",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "dlf-delivery",
+    "scheme": "speedza",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
     "ios": {
+      "bundleIdentifier": "com.speedza.app",
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We use your location to show nearby stores."
       }
     },
     "android": {
+      "package": "com.speedza.app",
       "adaptiveIcon": {
         "backgroundColor": "#16a34a"
       },
@@ -30,10 +32,19 @@
           "sounds": []
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "6ef242a0-a55d-4205-bc66-2bc935463675"
+      }
     }
   }
 }

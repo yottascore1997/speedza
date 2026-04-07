@@ -19,6 +19,22 @@ cd delivery-app
 npx expo start
 ```
 
+## Production build (Android)
+
+`npx eas` fails — use **`eas-cli`** (installed as a devDependency):
+
+```bash
+cd delivery-app
+npm install
+npx eas login
+npx eas build:configure   # links project on expo.dev (first time)
+npm run build:android       # AAB for Play Store (profile: production)
+# or APK for testing:
+npm run build:android:apk   # profile: preview
+```
+
+Or one-off without installing: `npx eas-cli@latest build --platform android --profile production`
+
 ## App structure
 
 - **Shop** tab — hero, today’s match banner, categories (`/api/master/shop-tree`), nearby stores, opens **Browse** per category (`/api/shop/category-quick`).
