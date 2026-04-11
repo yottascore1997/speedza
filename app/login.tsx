@@ -107,11 +107,18 @@ export default function LoginScreen() {
         setConfirm(result);
       } else {
         setConfirm(null);
-        await authBridgeRef.current?.sendOtp(e164);
+        if (!authBridgeRef.current) {
+          Alert.alert("Login", "Phone login is still starting. Wait a second and try again.");
+          return;
+        }
+        await authBridgeRef.current.sendOtp(e164);
       }
       setStep(2);
       Alert.alert("OTP sent", "Enter the code you received by SMS.");
     } catch (e: any) {
+      if (Platform.OS !== "web") {
+        authBridgeRef.current?.reset();
+      }
       const code = e?.code ?? "";
       const msg = e?.message || "Could not send OTP";
       Alert.alert(
@@ -138,10 +145,15 @@ export default function LoginScreen() {
     try {
       let idToken: string;
       if (Platform.OS === "web") {
-        const cred = await confirm!.confirm(otp);
+        const cred = await confirm!.confirm(otp.replace(/\s/g, ""));
         idToken = await cred.user.getIdToken();
       } else {
-        idToken = await authBridgeRef.current!.verifyOtp(otp);
+        const code = otp.replace(/\s/g, "");
+        if (!code) {
+          Alert.alert("OTP required", "Enter the code from SMS.");
+          return;
+        }
+        idToken = await authBridgeRef.current!.verifyOtp(code);
       }
       const res = await api<{
         token: string;
