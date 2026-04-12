@@ -1,4 +1,4 @@
-import { useState, useRef, createElement } from "react";
+import { useState, useRef, createElement, useMemo } from "react";
 import {
   View,
   Text,
@@ -26,7 +26,7 @@ import {
   signInWithPhoneNumber,
   type ConfirmationResult,
 } from "firebase/auth";
-import { getFirebaseApp, getFirebaseAuth } from "@/lib/firebase-client";
+import { getFirebaseAuth, getPublicFirebaseWebConfig } from "@/lib/firebase-client";
 import {
   FirebasePhoneAuthWebView,
   type FirebasePhoneAuthWebHandle,
@@ -52,6 +52,7 @@ async function registerPush() {
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const nativeFirebaseCfg = useMemo(() => getPublicFirebaseWebConfig(), []);
   const [bgFailed, setBgFailed] = useState(false);
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -100,6 +101,13 @@ export default function LoginScreen() {
       }
       const digits = phone.replace(/\D/g, "");
       const e164 = digits.startsWith("91") ? `+${digits}` : `+91${digits}`;
+      if (Platform.OS !== "web" && !nativeFirebaseCfg) {
+        Alert.alert(
+          "Unable to sign in",
+          "This app version could not load sign-in settings. Please contact support or try updating the app.",
+        );
+        return;
+      }
       if (Platform.OS === "web") {
         const auth = getFirebaseAuth();
         const verifier = new RecaptchaVerifier(auth, "recaptcha-container", { size: "invisible" });
@@ -315,6 +323,12 @@ export default function LoginScreen() {
           </>
         )}
 
+        {Platform.OS !== "web" && !nativeFirebaseCfg && step === 1 ? (
+          <Text style={styles.configWarn}>
+            Sign-in is not available on this build. Install an updated release or contact support.
+          </Text>
+        ) : null}
+
         {step === 1 && (
           <>
             <TextInput
@@ -326,7 +340,7 @@ export default function LoginScreen() {
               style={inputStyle}
             />
             <Pressable
-              disabled={loading}
+              disabled={loading || (Platform.OS !== "web" && !nativeFirebaseCfg)}
               onPress={() => void sendOtp()}
               style={({ pressed }) => [
                 styles.btnPrimary,
@@ -483,16 +497,8 @@ export default function LoginScreen() {
             style: { position: "fixed", left: -9999, width: 1, height: 1, overflow: "hidden" },
           })
         : null}
-      {Platform.OS !== "web" ? (
-        <FirebasePhoneAuthWebView
-          ref={authBridgeRef}
-          firebaseConfig={{
-            apiKey: getFirebaseApp().options.apiKey,
-            authDomain: getFirebaseApp().options.authDomain ?? "",
-            projectId: getFirebaseApp().options.projectId ?? "",
-            appId: getFirebaseApp().options.appId ?? "",
-          }}
-        />
+      {Platform.OS !== "web" && nativeFirebaseCfg ? (
+        <FirebasePhoneAuthWebView ref={authBridgeRef} firebaseConfig={nativeFirebaseCfg} />
       ) : null}
 
       <View style={{ flex: 1 }}>
@@ -544,6 +550,16 @@ const styles = StyleSheet.create({
     color: theme.textMuted,
     lineHeight: 20,
     marginBottom: 18,
+  },
+  configWarn: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#92400e",
+    backgroundColor: "#fef3c7",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+    lineHeight: 18,
   },
   btnPrimary: {
     backgroundColor: theme.primary,
