@@ -6,13 +6,11 @@ import {
   Pressable,
   RefreshControl,
   ActivityIndicator,
-  Platform,
   useWindowDimensions,
 } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { api, getToken } from "@/lib/api";
 import { theme } from "@/lib/theme";
@@ -26,9 +24,8 @@ const PAD = 16;
 const COLS = 4;
 const TILE_GAP = 10;
 
-/** Blinkit-style pastel behind product art */
-const TILE_SURFACE = "#e3f1f7";
-const TILE_SURFACE_SOFT = "#edf6fa";
+/** Match reference-like light tile background */
+const TILE_SURFACE = "#e9f3f7";
 
 type SubCategory = {
   id: string;
@@ -110,7 +107,7 @@ export default function CategoriesTabScreen() {
         <ScrollView
           contentContainerStyle={{
             paddingHorizontal: PAD,
-            paddingTop: 0,
+            paddingTop: 12,
             paddingBottom: 32 + insets.bottom,
           }}
           refreshControl={
@@ -118,18 +115,6 @@ export default function CategoriesTabScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
-          {/* Soft top wash (Blinkit-style warmth) */}
-          <LinearGradient
-            colors={["#fff8e8", "#fffdf7", theme.screenBg]}
-            locations={[0, 0.35, 1]}
-            style={{
-              marginHorizontal: -PAD,
-              marginBottom: 0,
-              paddingTop: 0,
-              paddingBottom: 4,
-            }}
-          />
-
           {err ? (
             <View
               style={{
@@ -147,34 +132,18 @@ export default function CategoriesTabScreen() {
 
           {mains.map((m) => (
             <View key={m.id} style={{ marginBottom: 24 }}>
-              <Pressable
-                onPress={() => openMainHub(m.key)}
-                style={({ pressed }) => ({
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: 10,
-                  paddingVertical: 0,
-                  opacity: pressed ? 0.85 : 1,
-                })}
-              >
+              <Pressable onPress={() => openMainHub(m.key)} style={{ marginBottom: 10 }}>
                 <Text
                   style={{
-                    flex: 1,
-                    fontSize: 20,
+                    fontSize: 39 / 2,
                     fontWeight: "900",
-                    color: "#1a1a1a",
-                    letterSpacing: -0.4,
-                    paddingRight: 8,
+                    color: "#2b2d33",
+                    letterSpacing: -0.35,
                   }}
                   numberOfLines={2}
                 >
                   {m.name}
                 </Text>
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Text style={{ fontSize: 13, fontWeight: "800", color: theme.primary }}>See all</Text>
-                  <MaterialCommunityIcons name="chevron-right" size={22} color={theme.primary} />
-                </View>
               </Pressable>
 
               {m.subcategories.length === 0 ? (
@@ -185,7 +154,6 @@ export default function CategoriesTabScreen() {
                     const col = idx % COLS;
                     const isLastInRow = col === COLS - 1;
                     const thumb = sub.imageUrl?.trim() ? resolveMediaUrl(sub.imageUrl) : undefined;
-                    const tileBg = idx % 2 === 0 ? TILE_SURFACE : TILE_SURFACE_SOFT;
 
                     return (
                       <Pressable
@@ -202,19 +170,9 @@ export default function CategoriesTabScreen() {
                           style={{
                             width: cell,
                             height: cell,
-                            borderRadius: 18,
-                            backgroundColor: tileBg,
+                            borderRadius: 16,
+                            backgroundColor: TILE_SURFACE,
                             overflow: "hidden",
-                            ...Platform.select({
-                              ios: {
-                                shadowColor: "#1e3a5f",
-                                shadowOffset: { width: 0, height: 2 },
-                                shadowOpacity: 0.06,
-                                shadowRadius: 8,
-                              },
-                              android: { elevation: 2 },
-                              default: {},
-                            }),
                           }}
                         >
                           {thumb ? (
@@ -233,7 +191,7 @@ export default function CategoriesTabScreen() {
                                 height: cell,
                                 alignItems: "center",
                                 justifyContent: "center",
-                                backgroundColor: tileBg,
+                                backgroundColor: TILE_SURFACE,
                               }}
                             >
                               <MaterialCommunityIcons name="package-variant" size={Math.min(34, cell * 0.38)} color="#94b8c9" />
@@ -244,11 +202,11 @@ export default function CategoriesTabScreen() {
                           numberOfLines={2}
                           style={{
                             marginTop: 8,
-                            fontSize: 11,
-                            fontWeight: "700",
-                            color: "#1f2937",
+                            fontSize: 14 / 1.15,
+                            fontWeight: "800",
+                            color: "#32343a",
                             textAlign: "center",
-                            lineHeight: 14,
+                            lineHeight: 17,
                             letterSpacing: -0.15,
                           }}
                         >

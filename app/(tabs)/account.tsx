@@ -1,10 +1,11 @@
 import { useCallback, useMemo, useState } from "react";
-import { View, Text, Pressable, Alert, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, Alert, ScrollView, ActivityIndicator, TextInput } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { api, clearSession, getToken, getUser, type User } from "@/lib/api";
+import * as ImagePicker from "expo-image-picker";
+import { api, clearSession, getApiBase, getToken, getUser, type User } from "@/lib/api";
 import { resolveMediaUrl } from "@/lib/assets";
 import { theme } from "@/lib/theme";
 import { CommonShopHeader } from "@/components/CommonShopHeader";
@@ -14,13 +15,28 @@ type OrderRow = {
   status: string;
   totalAmount: number;
   createdAt: string;
-  store: { name: string };
+  store: { name: string; shopVertical?: string | null };
   items?: { quantity: number; price: number; product: { name: string } }[];
 };
+
+/** Profile order cards: show store line only for food shops (same as Orders tab). */
+function showStoreName(store: { shopVertical?: string | null } | undefined): boolean {
+  const v = (store?.shopVertical ?? "").toLowerCase().trim();
+  return v === "food" || v.startsWith("food-");
+}
 
 type AddressRow = {
   label?: string | null;
   address: string;
+};
+type ListRequestRow = {
+  id: string;
+  imageUrl: string;
+  note: string;
+  address: string;
+  status: string;
+  adminNote?: string;
+  createdAt: string;
 };
 
 const ALLOWED_ROLES = new Set(["CUSTOMER", "STORE_OWNER", "DELIVERY", "ADMIN"]);
@@ -70,6 +86,10 @@ export default function AccountScreen() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [address, setAddress] = useState<AddressRow | null>(null);
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [listRequests, setListRequests] = useState<ListRequestRow[]>([]);
+  const [listImageUri, setListImageUri] = useState<string | null>(null);
+  const [listNote, setListNote] = useState("");
+  const [sendingList, setSendingList] = useState(false);
   const [loading, setLoading] = useState(true);
   const [roleErr, setRoleErr] = useState(false);
   const [ordersErr, setOrdersErr] = useState<string | null>(null);
@@ -107,10 +127,11 @@ export default function AccountScreen() {
 
         setRoleErr(false);
         setUser(localUser);
-        const [meRes, addrRes, ordRes] = await Promise.all([
+        const [meRes, addrRes, ordRes, listRes] = await Promise.all([
           api<{ user: { imageUrl: string | null } }>("/api/user/me"),
           api<{ address: AddressRow | null }>("/api/user/address"),
           api<{ orders: OrderRow[] }>("/api/orders/user?limit=40"),
+          api<{ requests: ListRequestRow[] }>("/api/list-requests?limit=15"),
         ]);
         if (meRes.ok && meRes.data?.user) {
           setImageUrl(resolveMediaUrl(meRes.data.user.imageUrl ?? undefined) ?? null);
@@ -128,6 +149,8 @@ export default function AccountScreen() {
           setOrders([]);
           setOrdersErr(ordRes.error || "Could not load orders");
         }
+        if (listRes.ok && listRes.data?.requests) setListRequests(listRes.data.requests);
+        else setListRequests([]);
         setLoading(false);
       })();
     }, []),
@@ -136,6 +159,68 @@ export default function AccountScreen() {
   async function logout() {
     await clearSession();
     setUser(null);
+  }
+  async function pickListImage() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert("Permission needed", "Allow gallery access to upload list photo.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.85,
+    });
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      setListImageUri(result.assets[0].uri);
+    }
+  }
+  async function submitListRequest() {
+    if (!listImageUri) {
+      Alert.alert("Photo required", "Please pick a list photo first.");
+      return;
+    }
+    const token = await getToken();
+    if (!token) {
+      Alert.alert("Sign in required", "Please login again.");
+      return;
+    }
+    setSendingList(true);
+    try {
+      const fd = new FormData();
+      const ext = listImageUri.split(".").pop()?.toLowerCase() || "jpg";
+      const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+      fd.append("file", { uri: listImageUri, name: `list.${ext}`, type: mime } as any);
+      const up = await fetch(`${getApiBase()}/api/list-requests/upload-image`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd as any,
+      });
+      const upJson = (await up.json().catch(() => null)) as { imageUrl?: string; error?: string } | null;
+      if (!up.ok || !upJson?.imageUrl) {
+        Alert.alert("Upload failed", upJson?.error || "Could not upload list image");
+        return;
+      }
+      const createRes = await api<{ request: ListRequestRow }>("/api/list-requests", {
+        method: "POST",
+        body: JSON.stringify({
+          imageUrl: upJson.imageUrl,
+          note: listNote.trim(),
+          address: address?.address ?? "",
+        }),
+      });
+      if (!createRes.ok) {
+        Alert.alert("Request failed", createRes.error || "Could not create list request");
+        return;
+      }
+      setListImageUri(null);
+      setListNote("");
+      const mine = await api<{ requests: ListRequestRow[] }>("/api/list-requests?limit=15");
+      if (mine.ok && mine.data?.requests) setListRequests(mine.data.requests);
+      Alert.alert("Submitted", "Admin received your grocery list. You can track status below.");
+    } finally {
+      setSendingList(false);
+    }
   }
 
   if (loading) {
@@ -309,6 +394,66 @@ export default function AccountScreen() {
         </View>
       </View>
 
+      <View style={{ ...cardElevated, padding: 16, marginBottom: 16 }}>
+        <Text style={{ fontSize: 17, fontWeight: "900", color: theme.text }}>Upload grocery list photo</Text>
+        <Text style={{ marginTop: 4, color: theme.textMuted, fontWeight: "600" }}>
+          Send one photo of your written list. Admin will process and deliver.
+        </Text>
+        <View style={{ marginTop: 12, flexDirection: "row", gap: 8 }}>
+          <Pressable
+            onPress={() => void pickListImage()}
+            style={{ borderWidth: 1, borderColor: "#86efac", backgroundColor: "#ecfdf5", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, flexDirection: "row", alignItems: "center", gap: 6 }}
+          >
+            <MaterialCommunityIcons name="image-plus" size={16} color="#166534" />
+            <Text style={{ color: "#166534", fontWeight: "900", fontSize: 12 }}>{listImageUri ? "Change photo" : "Pick photo"}</Text>
+          </Pressable>
+          <Pressable
+            disabled={sendingList || !listImageUri}
+            onPress={() => void submitListRequest()}
+            style={{ borderWidth: 1, borderColor: "#16a34a", backgroundColor: "#16a34a", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, opacity: sendingList || !listImageUri ? 0.55 : 1, flexDirection: "row", alignItems: "center", gap: 6 }}
+          >
+            <MaterialCommunityIcons name="send" size={16} color="#fff" />
+            <Text style={{ color: "#fff", fontWeight: "900", fontSize: 12 }}>{sendingList ? "Sending..." : "Send to admin"}</Text>
+          </Pressable>
+        </View>
+        {listImageUri ? (
+          <View style={{ marginTop: 10, borderWidth: 1, borderColor: theme.border, borderRadius: 12, overflow: "hidden", backgroundColor: "#fff" }}>
+            <Image source={{ uri: listImageUri }} style={{ width: "100%", height: 160 }} contentFit="cover" />
+          </View>
+        ) : null}
+        <TextInput
+          value={listNote}
+          onChangeText={setListNote}
+          placeholder="Optional note for admin (e.g. 2kg sugar, good quality)"
+          placeholderTextColor={theme.textDim}
+          multiline
+          style={{ marginTop: 10, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.bgElevated, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, color: theme.text, minHeight: 44, textAlignVertical: "top" }}
+        />
+        {listRequests.length > 0 ? (
+          <View style={{ marginTop: 12, gap: 8 }}>
+            <Text style={{ fontSize: 13, color: theme.textDim, fontWeight: "900", letterSpacing: 0.4 }}>
+              LIST REQUEST STATUS
+            </Text>
+            {listRequests.slice(0, 4).map((r) => (
+              <View key={r.id} style={{ borderWidth: 1, borderColor: theme.border, backgroundColor: "#f8fafc", borderRadius: 12, padding: 10 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Text style={{ color: theme.text, fontWeight: "800", fontSize: 12 }}>#{r.id.slice(0, 8)}</Text>
+                  <Text style={{ color: "#166534", fontWeight: "900", fontSize: 11 }}>{r.status.replace(/_/g, " ")}</Text>
+                </View>
+                <Text style={{ marginTop: 5, color: theme.textMuted, fontSize: 11, fontWeight: "600" }}>
+                  {new Date(r.createdAt).toLocaleString()}
+                </Text>
+                {r.adminNote ? (
+                  <Text style={{ marginTop: 4, color: theme.text, fontSize: 11, fontWeight: "700" }}>
+                    Admin: {r.adminNote}
+                  </Text>
+                ) : null}
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </View>
+
       {ordersErr ? (
         <View style={{ marginBottom: 12, borderWidth: 1, borderColor: theme.roseBorder, backgroundColor: theme.roseBg, padding: 12, borderRadius: 12 }}>
           <Text style={{ color: theme.roseText, fontWeight: "600" }}>{ordersErr}</Text>
@@ -344,8 +489,19 @@ export default function AccountScreen() {
                   </View>
                 </View>
                 <View style={{ padding: 12 }}>
-                  <Text style={{ fontSize: 16, fontWeight: "900", color: theme.text }}>{o.store.name}</Text>
-                  <Text style={{ fontSize: 12, color: theme.textMuted, marginTop: 3, fontWeight: "600" }}>{new Date(o.createdAt).toLocaleString()}</Text>
+                  {showStoreName(o.store) ? (
+                    <Text style={{ fontSize: 16, fontWeight: "900", color: theme.text }}>{o.store.name}</Text>
+                  ) : null}
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: theme.textMuted,
+                      marginTop: showStoreName(o.store) ? 3 : 0,
+                      fontWeight: "600",
+                    }}
+                  >
+                    {new Date(o.createdAt).toLocaleString()}
+                  </Text>
                   {o.items?.length ? (
                     <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 8, gap: 4 }}>
                       {o.items.slice(0, 3).map((i, idx) => (
@@ -382,8 +538,18 @@ export default function AccountScreen() {
           <View style={{ marginTop: 10, gap: 10 }}>
             {pastOrders.map((o) => (
               <View key={o.id} style={{ ...cardElevated, padding: 14 }}>
-                <Text style={{ fontWeight: "800", fontSize: 16, color: theme.text }}>{o.store.name}</Text>
-                <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                {showStoreName(o.store) ? (
+                  <Text style={{ fontWeight: "800", fontSize: 16, color: theme.text }}>{o.store.name}</Text>
+                ) : null}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 8,
+                    marginTop: showStoreName(o.store) ? 8 : 0,
+                  }}
+                >
                   <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: statusPillColors(o.status).bg }}>
                     <Text style={{ fontSize: 11, color: statusPillColors(o.status).text, fontWeight: "800", textTransform: "capitalize" }}>
                       {o.status.replace(/_/g, " ").toLowerCase()}

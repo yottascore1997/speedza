@@ -3,18 +3,22 @@ import { ActivityIndicator, View } from "react-native";
 import { Redirect, Tabs } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { theme } from "@/lib/theme";
-import { getToken } from "@/lib/api";
+import { clearSession, getToken, getUser } from "@/lib/api";
 import { cartTotalQty, getCart, subscribeCart } from "@/lib/cart";
 
 export default function TabsLayout() {
   const [checking, setChecking] = useState(true);
   const [authed, setAuthed] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
   const [cartQty, setCartQty] = useState(0);
 
   useEffect(() => {
     void (async () => {
       const token = await getToken();
-      setAuthed(Boolean(token));
+      const user = await getUser();
+      const ok = Boolean(token && user);
+      setAuthed(ok);
+      setRole(user?.role ?? null);
       setChecking(false);
     })();
   }, []);
@@ -44,6 +48,15 @@ export default function TabsLayout() {
   }
 
   if (!authed) {
+    return <Redirect href="/login" />;
+  }
+
+  if (role === "STORE_OWNER") {
+    return <Redirect href="/store-owner" />;
+  }
+
+  if (role && role !== "CUSTOMER" && role !== "STORE_OWNER") {
+    void clearSession();
     return <Redirect href="/login" />;
   }
 

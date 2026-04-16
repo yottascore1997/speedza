@@ -11,18 +11,24 @@ import {
 import { useFocusEffect, useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { api } from "@/lib/api";
-import { addToCart } from "@/lib/cart";
 import { theme } from "@/lib/theme";
 import { resolveMediaUrl } from "@/lib/assets";
+import { CartQtyStepper } from "@/components/CartQtyStepper";
+import { ProductPriceOfferRow } from "@/components/ProductPriceOfferRow";
 
 type Product = {
   id: string;
   name: string;
   description: string;
   price: number | string;
+  mrp?: number | null;
+  discountPercent?: number | null;
   imageUrl?: string | null;
   stock: number;
   categoryId: string;
+  unitLabel?: string | null;
+  variantOptionsCount?: number;
+  priceMax?: number | null;
 };
 
 type Category = { id: string; name: string; products: Product[] };
@@ -58,21 +64,14 @@ export default function StoreDetailScreen() {
     return typeof p.price === "number" ? p.price : parseFloat(String(p.price)) || 0;
   }
 
-  async function add(p: Product) {
-    if (p.stock < 1) {
-      Alert.alert("Out of stock");
-      return;
+  function mrpNum(p: Product) {
+    const v = p.mrp;
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string") {
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : 0;
     }
-    await addToCart({
-      productId: p.id,
-      storeId: id!,
-      name: p.name,
-      price: priceNum(p),
-      quantity: 1,
-      storeName: name,
-      imageUrl: p.imageUrl ?? null,
-    });
-    Alert.alert("Added", `${p.name} added to cart`);
+    return 0;
   }
 
   if (loading) {
@@ -127,23 +126,42 @@ export default function StoreDetailScreen() {
                     <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 4 }} numberOfLines={2}>
                       {p.description}
                     </Text>
+                    {p.unitLabel ? (
+                      <Text style={{ fontSize: 11, color: theme.textDim, marginTop: 3, fontWeight: "700" }}>
+                        {p.unitLabel}
+                      </Text>
+                    ) : null}
+                    <ProductPriceOfferRow
+                      sellingPrice={priceNum(p)}
+                      mrp={mrpNum(p)}
+                      discountPercent={p.discountPercent}
+                      priceMax={p.priceMax}
+                      variantOptionsCount={p.variantOptionsCount}
+                    />
                     <Text style={{ fontSize: 11, color: theme.textDim, marginTop: 4 }}>Stock: {p.stock}</Text>
                   </View>
                 </Pressable>
-                <Pressable
-                  onPress={() => void add(p)}
-                  style={{
-                    alignSelf: "center",
-                    backgroundColor: theme.accent,
-                    paddingHorizontal: 12,
-                    paddingVertical: 10,
-                    borderRadius: 10,
-                  }}
-                >
-                  <Text style={{ color: "#fff", fontWeight: "900" }}>
-                    Add · ₹{Math.round(priceNum(p) * 100) / 100}
-                  </Text>
-                </Pressable>
+                <View style={{ alignSelf: "center", minWidth: 132, maxWidth: 160 }}>
+                  <CartQtyStepper
+                    compact
+                    addLabel="ADD"
+                    line={{
+                      productId: p.id,
+                      storeId: id!,
+                      name: p.name,
+                      price: priceNum(p),
+                      storeName: name,
+                      imageUrl: p.imageUrl ?? null,
+                      mrp: mrpNum(p) > 0 ? mrpNum(p) : undefined,
+                      discountPercent:
+                        typeof p.discountPercent === "number" && p.discountPercent > 0
+                          ? p.discountPercent
+                          : undefined,
+                    }}
+                    maxQty={p.stock}
+                    canAdd={p.stock > 0}
+                  />
+                </View>
               </View>
             );
           })}

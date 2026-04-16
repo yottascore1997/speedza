@@ -12,10 +12,13 @@ import {
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from "expo-image";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { api, getToken } from "@/lib/api";
 import { theme } from "@/lib/theme";
+import { resolveMediaUrl } from "@/lib/assets";
 import { CommonShopHeader } from "@/components/CommonShopHeader";
+import { ProductPriceOfferRow } from "@/components/ProductPriceOfferRow";
 
 function statusPillColors(status: string): { bg: string; text: string } {
   const s = status.toUpperCase();
@@ -44,8 +47,12 @@ type OrderRow = {
   status: string;
   totalAmount: number;
   createdAt: string;
-  store: { name: string };
-  items?: { quantity: number; price: number; product: { name: string } }[];
+  store: { name: string; shopVertical?: string | null };
+  items?: {
+    quantity: number;
+    price: number;
+    product: { id?: string; name: string; imageUrl?: string | null; imageUrl2?: string | null; mrp?: number | null };
+  }[];
   delivery?: { id: string; status: string } | null;
 };
 
@@ -55,6 +62,25 @@ function orderStatusLabel(status: string) {
 
 function money(v: number) {
   return `₹${Math.round(v * 100) / 100}`;
+}
+
+function productThumbUri(p: { imageUrl?: string | null; imageUrl2?: string | null } | undefined): string | undefined {
+  if (!p) return undefined;
+  return resolveMediaUrl(p.imageUrl?.trim() || p.imageUrl2?.trim() || undefined);
+}
+
+/** Store line under product — only for food-vertical shops (matches `Store.shopVertical`). */
+function showStoreName(store: { shopVertical?: string | null } | undefined): boolean {
+  const v = (store?.shopVertical ?? "").toLowerCase().trim();
+  return v === "food" || v.startsWith("food-");
+}
+
+/** Unit-level % off from catalog MRP vs price you paid (per unit on the order line). */
+function unitDiscountPercent(mrp: number | null | undefined, unitSelling: number): number | null {
+  const m = typeof mrp === "number" && Number.isFinite(mrp) ? mrp : 0;
+  if (m <= unitSelling || m <= 0) return null;
+  const p = Math.round(((m - unitSelling) / m) * 100);
+  return p > 0 ? p : null;
 }
 
 /** Must match server default `CUSTOMER_ORDER_CANCEL_MINUTES` (delivery/.env). */
@@ -200,6 +226,7 @@ export default function OrdersScreen() {
         renderItem={({ item }) => {
           const pill = statusPillColors(item.status);
           const firstItem = item.items?.[0];
+          const firstThumb = productThumbUri(firstItem?.product);
           const firstItemTotal = firstItem ? firstItem.price * firstItem.quantity : item.totalAmount;
           return (
             <Pressable style={orderCard} onPress={() => setActiveOrder(item)}>
@@ -223,31 +250,53 @@ export default function OrdersScreen() {
               </View>
 
               <View style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 10 }}>
-                    <View
-                      style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 22,
-                        backgroundColor: "#f3f4f6",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <MaterialCommunityIcons name="food" size={22} color={theme.textMuted} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: theme.text, fontSize: 29, fontWeight: "900" }} numberOfLines={1}>
-                        {firstItem?.product.name || "Order item"}
-                      </Text>
-                      <Text style={{ color: theme.textMuted, fontSize: 14, fontWeight: "600", marginTop: 2 }} numberOfLines={1}>
+                <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                  <View
+                    style={{
+                      width: 112,
+                      height: 96,
+                      borderRadius: 16,
+                      backgroundColor: "#f3f4f6",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {firstThumb ? (
+                      <Image
+                        source={{ uri: firstThumb }}
+                        style={{ width: "100%", height: "100%" }}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                        recyclingKey={firstItem?.product.id ?? firstThumb}
+                      />
+                    ) : (
+                      <MaterialCommunityIcons name="package-variant" size={40} color={theme.textMuted} />
+                    )}
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
+                    <Text style={{ color: theme.text, fontSize: 22, fontWeight: "900" }} numberOfLines={2}>
+                      {firstItem?.product.name || "Order item"}
+                    </Text>
+                    {showStoreName(item.store) ? (
+                      <Text style={{ color: theme.textMuted, fontSize: 14, fontWeight: "600", marginTop: 6 }} numberOfLines={1}>
                         {item.store.name}
                       </Text>
-                    </View>
+                    ) : null}
+                    {firstItem ? (
+                      <ProductPriceOfferRow
+                        sellingPrice={firstItem.price}
+                        mrp={typeof firstItem.product.mrp === "number" ? firstItem.product.mrp : 0}
+                        discountPercent={unitDiscountPercent(firstItem.product.mrp, firstItem.price)}
+                        compact
+                        layout="premiumGrid"
+                        style={{ marginTop: showStoreName(item.store) ? 8 : 10 }}
+                      />
+                    ) : null}
                   </View>
-                  <View style={{ alignItems: "flex-end" }}>
-                    <Text style={{ color: "#ea580c", fontSize: 21, fontWeight: "900" }}>{money(item.totalAmount)}</Text>
+                  <View style={{ alignItems: "flex-end", paddingTop: 2 }}>
+                    <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: "800" }}>Order total</Text>
+                    <Text style={{ color: "#ea580c", fontSize: 21, fontWeight: "900", marginTop: 2 }}>{money(item.totalAmount)}</Text>
                     <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: "700", marginTop: 2 }}>COD</Text>
                   </View>
                 </View>
@@ -263,16 +312,26 @@ export default function OrdersScreen() {
                     borderWidth: 1,
                     borderColor: theme.border,
                     backgroundColor: "#f9fafb",
-                    flexDirection: "row",
-                    justifyContent: "space-between",
                     paddingHorizontal: 12,
                     paddingVertical: 10,
                   }}
                 >
-                  <Text style={{ color: theme.text, fontSize: 14, fontWeight: "700", flex: 1 }} numberOfLines={1}>
-                    {firstItem ? `${firstItem.quantity}x ${firstItem.product.name}` : "Tap to view details"}
-                  </Text>
-                  <Text style={{ color: theme.textMuted, fontSize: 13, fontWeight: "700" }}>{money(firstItemTotal)}</Text>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                    <Text style={{ color: theme.text, fontSize: 14, fontWeight: "700", flex: 1 }} numberOfLines={2}>
+                      {firstItem ? `${firstItem.quantity}x ${firstItem.product.name}` : "Tap to view details"}
+                    </Text>
+                    <Text style={{ color: theme.text, fontSize: 14, fontWeight: "900" }}>{money(firstItemTotal)}</Text>
+                  </View>
+                  {firstItem ? (
+                    <ProductPriceOfferRow
+                      sellingPrice={firstItem.price}
+                      mrp={typeof firstItem.product.mrp === "number" ? firstItem.product.mrp : 0}
+                      discountPercent={unitDiscountPercent(firstItem.product.mrp, firstItem.price)}
+                      compact
+                      layout="inline"
+                      style={{ marginTop: 8 }}
+                    />
+                  ) : null}
                 </View>
               </View>
             </Pressable>
@@ -313,36 +372,88 @@ export default function OrdersScreen() {
                     backgroundColor: "#f8faf9",
                   }}
                 >
-                  <Text style={{ color: theme.text, fontWeight: "900", fontSize: 16 }}>{activeOrder.store.name}</Text>
-                  <Text style={{ marginTop: 5, color: theme.textMuted, fontWeight: "700" }}>
+                  {showStoreName(activeOrder.store) ? (
+                    <Text style={{ color: theme.text, fontWeight: "900", fontSize: 16 }}>{activeOrder.store.name}</Text>
+                  ) : null}
+                  <Text
+                    style={{
+                      marginTop: showStoreName(activeOrder.store) ? 5 : 0,
+                      color: theme.textMuted,
+                      fontWeight: "700",
+                    }}
+                  >
                     Status: {orderStatusLabel(activeOrder.status)}
                   </Text>
                 </View>
 
                 <Text style={{ marginTop: 16, color: theme.text, fontWeight: "900", fontSize: 16 }}>Items</Text>
                 <View style={{ marginTop: 8, gap: 8 }}>
-                  {(activeOrder.items ?? []).map((line, idx) => (
-                    <View
-                      key={`${line.product.name}-${idx}`}
-                      style={{
-                        borderRadius: 12,
-                        borderWidth: 1,
-                        borderColor: theme.border,
-                        paddingHorizontal: 12,
-                        paddingVertical: 10,
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        backgroundColor: "#fff",
-                      }}
-                    >
-                      <Text style={{ color: theme.text, fontWeight: "700", flex: 1 }} numberOfLines={1}>
-                        {line.quantity}x {line.product.name}
-                      </Text>
-                      <Text style={{ color: theme.textMuted, fontWeight: "800" }}>
-                        {money(line.quantity * line.price)}
-                      </Text>
-                    </View>
-                  ))}
+                  {(activeOrder.items ?? []).map((line, idx) => {
+                    const thumb = productThumbUri(line.product);
+                    const lineKey = line.product.id ?? `${line.product.name}-${idx}`;
+                    const lineTotal = line.quantity * line.price;
+                    return (
+                      <View
+                        key={lineKey}
+                        style={{
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: theme.border,
+                          paddingHorizontal: 12,
+                          paddingVertical: 10,
+                          flexDirection: "row",
+                          alignItems: "flex-start",
+                          gap: 10,
+                          backgroundColor: "#fff",
+                        }}
+                      >
+                        <View
+                          style={{
+                            width: 84,
+                            height: 76,
+                            borderRadius: 14,
+                            overflow: "hidden",
+                            backgroundColor: "#f3f4f6",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          {thumb ? (
+                            <Image
+                              source={{ uri: thumb }}
+                              style={{ width: "100%", height: "100%" }}
+                              contentFit="cover"
+                              cachePolicy="memory-disk"
+                              recyclingKey={line.product.id ?? thumb}
+                            />
+                          ) : (
+                            <MaterialCommunityIcons name="package-variant" size={36} color={theme.textMuted} />
+                          )}
+                        </View>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={{ color: theme.text, fontWeight: "800" }} numberOfLines={2}>
+                            {line.quantity}× {line.product.name}
+                          </Text>
+                          <ProductPriceOfferRow
+                            sellingPrice={line.price}
+                            mrp={typeof line.product.mrp === "number" ? line.product.mrp : 0}
+                            discountPercent={unitDiscountPercent(line.product.mrp, line.price)}
+                            compact
+                            layout="premiumGrid"
+                            style={{ marginTop: 4 }}
+                          />
+                        </View>
+                        <View style={{ alignItems: "flex-end", paddingTop: 2 }}>
+                          <Text style={{ color: theme.text, fontWeight: "900", fontSize: 15 }}>{money(lineTotal)}</Text>
+                          {line.quantity > 1 ? (
+                            <Text style={{ marginTop: 4, fontSize: 11, fontWeight: "600", color: theme.textMuted }}>
+                              ×{line.quantity}
+                            </Text>
+                          ) : null}
+                        </View>
+                      </View>
+                    );
+                  })}
                   {!activeOrder.items?.length ? (
                     <View
                       style={{

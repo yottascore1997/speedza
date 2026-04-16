@@ -6,8 +6,8 @@ export const theme = {
   placeOrderGradient: ["#022c22", "#004d3d", "#059669"] as const,
   /** Full-bleed surfaces (home, etc.) — warm off-white, not stark #fff */
   bg: "#f4f8f6",
-  /** Shop home scroll background — soft mint */
-  homeCanvasBg: "#f0fdf4",
+  /** Shop home scroll background — soft warm orange (matches home header) */
+  homeCanvasBg: "#fff4e6",
   /** Sponsored ad strip above stores (forest → emerald) */
   adBannerGradient: ["#022c22", "#004d3d", "#059669"] as const,
   /** Page canvas — soft peach */

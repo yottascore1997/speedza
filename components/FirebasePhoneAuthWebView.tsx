@@ -53,6 +53,7 @@ type Props = {
     projectId: string;
     appId: string;
   };
+  onReadyChange?: (ready: boolean) => void;
 };
 
 function buildHtml(cfg: Props["firebaseConfig"]): string {
@@ -129,7 +130,7 @@ function buildHtml(cfg: Props["firebaseConfig"]): string {
 }
 
 export const FirebasePhoneAuthWebView = forwardRef<FirebasePhoneAuthWebHandle, Props>(
-  function FirebasePhoneAuthWebView({ firebaseConfig }, ref) {
+  function FirebasePhoneAuthWebView({ firebaseConfig, onReadyChange }, ref) {
     const { width: winW } = useWindowDimensions();
     const [sessionKey, setSessionKey] = useState(0);
     const webRef = useRef<WebView>(null);
@@ -150,13 +151,15 @@ export const FirebasePhoneAuthWebView = forwardRef<FirebasePhoneAuthWebHandle, P
 
     const flushReady = useCallback(() => {
       bridgeReady.current = true;
+      onReadyChange?.(true);
       readyWaiters.current.splice(0).forEach((w) => w.resolve());
-    }, []);
+    }, [onReadyChange]);
 
     const resetReady = useCallback(() => {
       bridgeReady.current = false;
+      onReadyChange?.(false);
       readyWaiters.current.splice(0).forEach((w) => w.reject(new Error("WebView reset")));
-    }, []);
+    }, [onReadyChange]);
 
     useEffect(() => {
       resetReady();

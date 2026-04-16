@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, Pressable, ScrollView, TextInput, Alert } from "react-native";
+import { View, Text, Pressable, ScrollView, TextInput, Alert, Platform } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { api, clearSession } from "@/lib/api";
 import { cartTotalQty, getCart, subscribeCart } from "@/lib/cart";
@@ -9,8 +10,30 @@ import { getShopHeaderColors } from "@/lib/shopHeaderTheme";
 
 const SHOP_KEY = "__shop__";
 
-const SEARCH_BORDER = "#e7e5e4";
-const SEARCH_ICON = "#78716c";
+const SEARCH_BORDER = "rgba(15, 23, 42, 0.08)";
+const SEARCH_ICON = "#57534e";
+
+const headerLift = Platform.select({
+  ios: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.07,
+    shadowRadius: 14,
+  },
+  android: { elevation: 5 },
+  default: {},
+});
+
+const iconCircleLift = Platform.select({
+  ios: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+  },
+  android: { elevation: 3 },
+  default: {},
+});
 
 function normKey(k: string): string {
   return k.toLowerCase().replace(/\s+/g, "-").trim();
@@ -141,10 +164,43 @@ export function ShopMarketHeader({
     ]);
   }
 
+  const gradientColors = [...colors.headerGradient] as [string, string, ...string[]];
+  const badgeRing = colors.headerGradient[2];
+
   return (
-    <View>
-      <View style={{ backgroundColor: colors.topBar }}>
-      <View style={{ paddingTop: safeTop, paddingHorizontal: 16, paddingBottom: 10 }}>
+    <LinearGradient
+      colors={gradientColors}
+      locations={[0, 0.42, 1]}
+      start={{ x: 0.5, y: 0 }}
+      end={{ x: 0.5, y: 1 }}
+      style={{ width: "100%", zIndex: 20, elevation: 8 }}
+    >
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          top: safeTop + 8,
+          right: -24,
+          width: 120,
+          height: 120,
+          borderRadius: 60,
+          backgroundColor: "rgba(255,255,255,0.35)",
+        }}
+      />
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          top: safeTop + 52,
+          left: -40,
+          width: 100,
+          height: 100,
+          borderRadius: 50,
+          backgroundColor: "rgba(255,255,255,0.2)",
+        }}
+      />
+
+      <View style={{ paddingTop: safeTop, paddingHorizontal: 16, paddingBottom: 12 }}>
         <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
           <Pressable
             onPress={() => router.push("/profile")}
@@ -152,55 +208,68 @@ export function ShopMarketHeader({
           >
             <View
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: "rgba(255,255,255,0.15)",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <MaterialCommunityIcons name="map-marker" size={20} color="#fff" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  fontSize: 10,
-                  fontWeight: "800",
-                  color: colors.deliverGold,
-                  letterSpacing: 1.4,
-                }}
-              >
-                DELIVER TO
-              </Text>
-              <Text
-                numberOfLines={2}
-                style={{
-                  marginTop: 4,
-                  fontSize: 15,
-                  fontWeight: "800",
-                  color: "#ffffff",
-                  lineHeight: 19,
-                }}
-              >
-                {deliverLine}
-              </Text>
-            </View>
-          </Pressable>
-
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <Pressable
-              onPress={() => router.push("/cart")}
-              style={{
                 width: 40,
                 height: 40,
                 borderRadius: 20,
-                backgroundColor: "rgba(0,0,0,0.2)",
+                backgroundColor: "#ffffff",
                 alignItems: "center",
                 justifyContent: "center",
+                ...iconCircleLift,
               }}
             >
-              <MaterialCommunityIcons name="cart-outline" size={22} color="#fff" />
+              <MaterialCommunityIcons name="map-marker" size={22} color="#44403c" />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ fontSize: 11, fontWeight: "800", color: "#57534e", letterSpacing: 0.2 }}>
+                Speedza in
+              </Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 2 }}>
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    flexShrink: 1,
+                    fontSize: 17,
+                    fontWeight: "900",
+                    color: "#0c0a09",
+                    letterSpacing: -0.3,
+                    lineHeight: 22,
+                  }}
+                >
+                  {deliverLine}
+                </Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    backgroundColor: "rgba(204, 251, 241, 0.95)",
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: "rgba(13, 148, 136, 0.15)",
+                  }}
+                >
+                  <MaterialCommunityIcons name="storefront-outline" size={14} color="#0f7669" />
+                  <Text style={{ marginLeft: 4, fontSize: 11, fontWeight: "900", color: "#0f7669" }}>Nearby</Text>
+                </View>
+              </View>
+            </View>
+          </Pressable>
+
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Pressable
+              onPress={() => router.push("/cart")}
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 21,
+                backgroundColor: "#ffffff",
+                alignItems: "center",
+                justifyContent: "center",
+                ...iconCircleLift,
+              }}
+            >
+              <MaterialCommunityIcons name="cart-outline" size={22} color="#1c1917" />
               {cartCount > 0 ? (
                 <View
                   style={{
@@ -215,7 +284,7 @@ export function ShopMarketHeader({
                     justifyContent: "center",
                     paddingHorizontal: 4,
                     borderWidth: 2,
-                    borderColor: colors.topBar,
+                    borderColor: badgeRing,
                   }}
                 >
                   <Text style={{ color: "#fff", fontSize: 10, fontWeight: "900" }}>
@@ -227,13 +296,16 @@ export function ShopMarketHeader({
 
             <View
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
+                width: 42,
+                height: 42,
+                borderRadius: 21,
                 backgroundColor: colors.logoCircle,
                 alignItems: "center",
                 justifyContent: "center",
                 overflow: "hidden",
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.85)",
+                ...iconCircleLift,
               }}
             >
               <Text style={{ fontSize: 17, fontWeight: "900", color: colors.logoText, marginTop: -1 }}>S</Text>
@@ -242,25 +314,25 @@ export function ShopMarketHeader({
             <Pressable
               onPress={() => void signOut()}
               style={{
-                paddingHorizontal: 10,
+                paddingHorizontal: 8,
                 paddingVertical: 8,
-                borderRadius: 10,
+                borderRadius: 999,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.5)",
+                borderColor: "rgba(28, 25, 23, 0.12)",
+                backgroundColor: "rgba(255,255,255,0.65)",
               }}
             >
-              <Text style={{ color: "#fff", fontWeight: "900", fontSize: 11, letterSpacing: 0.5 }}>OUT</Text>
+              <Text style={{ color: "#44403c", fontWeight: "900", fontSize: 10, letterSpacing: 0.4 }}>OUT</Text>
             </Pressable>
           </View>
         </View>
       </View>
-      </View>
 
-      <View style={{ backgroundColor: colors.categoryBar, paddingTop: 10, paddingBottom: 12 }}>
+      <View style={{ paddingTop: 4, paddingBottom: 10 }}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 14, gap: 8, alignItems: "flex-start", paddingBottom: 4 }}
+          contentContainerStyle={{ paddingHorizontal: 14, gap: 6, alignItems: "flex-end", paddingBottom: 2 }}
         >
           {categories.map((c) => {
             const isHome = c.key === SHOP_KEY;
@@ -271,29 +343,13 @@ export function ShopMarketHeader({
               <Pressable
                 key={c.id}
                 onPress={() => (isHome ? onShopPress() : onCategoryPress(c.key))}
-                style={{ width: 68, alignItems: "center" }}
+                style={{ width: 68, alignItems: "center", paddingBottom: 2 }}
               >
-                <View
-                  style={{
-                    borderRadius: 14,
-                    backgroundColor: active ? "#ffffff" : "transparent",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    paddingVertical: 5,
-                    paddingHorizontal: 4,
-                    width: "100%",
-                    minHeight: 46,
-                    shadowColor: active ? colors.activeChipShadow : "transparent",
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: active ? 0.12 : 0,
-                    shadowRadius: 3,
-                    elevation: active ? 1 : 0,
-                  }}
-                >
+                <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: 4, width: "100%" }}>
                   <MaterialCommunityIcons
                     name={isHome ? (active ? "home" : "home-outline") : stripIcon!}
                     size={24}
-                    color={active ? "#111827" : inactiveColor}
+                    color={active ? "#0c0a09" : inactiveColor}
                   />
                   <Text
                     numberOfLines={1}
@@ -302,8 +358,8 @@ export function ShopMarketHeader({
                       marginTop: 4,
                       textAlign: "center",
                       fontSize: 10,
-                      fontWeight: "800",
-                      color: active ? "#111827" : inactiveColor,
+                      fontWeight: active ? "900" : "800",
+                      color: active ? "#0c0a09" : inactiveColor,
                       lineHeight: 12,
                       width: "100%",
                     }}
@@ -311,6 +367,15 @@ export function ShopMarketHeader({
                     {c.name}
                   </Text>
                 </View>
+                <View
+                  style={{
+                    marginTop: 4,
+                    width: active ? 28 : 0,
+                    height: 3,
+                    borderRadius: 2,
+                    backgroundColor: active ? "#0c0a09" : "transparent",
+                  }}
+                />
               </Pressable>
             );
           })}
@@ -321,29 +386,24 @@ export function ShopMarketHeader({
         style={{
           marginTop: 0,
           paddingHorizontal: 16,
-          paddingTop: 10,
-          paddingBottom: pageTitle ? 12 : 14,
-          marginBottom: pageTitle ? 0 : 2,
+          paddingTop: 4,
+          paddingBottom: pageTitle ? 12 : 16,
+          marginBottom: pageTitle ? 0 : 0,
           zIndex: 2,
-          backgroundColor: colors.searchBand,
         }}
       >
         <View
           style={{
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: "#ffffff",
-            borderRadius: 14,
-            paddingLeft: 12,
-            paddingRight: 5,
-            minHeight: 48,
-            borderWidth: 1.5,
+            backgroundColor: "rgba(255, 255, 255, 0.92)",
+            borderRadius: 999,
+            paddingLeft: 16,
+            paddingRight: 6,
+            minHeight: 50,
+            borderWidth: 1,
             borderColor: SEARCH_BORDER,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            elevation: 4,
+            ...headerLift,
           }}
         >
           <MaterialCommunityIcons name="magnify" size={21} color={SEARCH_ICON} />
@@ -368,9 +428,9 @@ export function ShopMarketHeader({
             onPress={() => goSearch()}
             style={{
               backgroundColor: colors.goBtn,
-              paddingHorizontal: 16,
-              paddingVertical: 11,
-              borderRadius: 11,
+              paddingHorizontal: 18,
+              paddingVertical: 12,
+              borderRadius: 999,
               marginVertical: 4,
             }}
           >
@@ -433,6 +493,6 @@ export function ShopMarketHeader({
           </View>
         ) : null}
       </View>
-    </View>
+    </LinearGradient>
   );
 }

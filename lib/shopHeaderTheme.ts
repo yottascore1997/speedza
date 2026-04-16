@@ -10,15 +10,20 @@ export type ShopHeaderColors = {
   goBtn: string;
   logoCircle: string;
   logoText: string;
-  /** Inactive chips on category bar (usually white on saturated mid-tone). */
+  /** Inactive category strip icon + label (dark enough on light header gradient). */
   chipInactive: string;
   activeChipShadow: string;
+  /**
+   * Soft vertical gradient behind the whole header (Blinkit-style premium stack).
+   * Spread with `[...]` when passing to LinearGradient.
+   */
+  headerGradient: readonly [string, string, string];
 };
 
 const SHOP_HOME = "__shop__";
 
-/** Home / daily essentials / grocery — warm orange stack (bottom-nav default) */
-const DAILY_GREEN: ShopHeaderColors = {
+/** Home default — warm orange stack */
+const HOME_ORANGE: ShopHeaderColors = {
   topBar: "#9a3412",
   categoryBar: "#ea580c",
   searchBand: "#fb923c",
@@ -26,8 +31,24 @@ const DAILY_GREEN: ShopHeaderColors = {
   goBtn: "#c2410c",
   logoCircle: "#ffffff",
   logoText: "#7c2d12",
-  chipInactive: "#ffffff",
+  chipInactive: "#292524",
   activeChipShadow: "#7c2d12",
+  /** Shop home — clear orange wash (tab Home / daily essentials) */
+  headerGradient: ["#fb923c", "#fdba74", "#fff4e6"],
+};
+
+/** Daily essentials — green stack */
+const DAILY_GREEN: ShopHeaderColors = {
+  topBar: "#14532d",
+  categoryBar: "#16a34a",
+  searchBand: "#4ade80",
+  deliverGold: "#dcfce7",
+  goBtn: "#166534",
+  logoCircle: "#ffffff",
+  logoText: "#14532d",
+  chipInactive: "#292524",
+  activeChipShadow: "#14532d",
+  headerGradient: ["#22c55e", "#4ade80", "#dcfce7"],
 };
 
 /** Food — chocolate / warm brown */
@@ -39,8 +60,9 @@ const FOOD_WARM: ShopHeaderColors = {
   goBtn: "#3d2318",
   logoCircle: "#fbbf24",
   logoText: "#3d2318",
-  chipInactive: "#ffffff",
+  chipInactive: "#292524",
   activeChipShadow: "#451a03",
+  headerGradient: ["#D9A078", "#FFD4B8", "#FFF0E4"],
 };
 
 /** Beverages — blue */
@@ -52,8 +74,9 @@ const BEVERAGE_BLUE: ShopHeaderColors = {
   goBtn: "#1e3a8a",
   logoCircle: "#fef08a",
   logoText: "#1e3a8a",
-  chipInactive: "#ffffff",
+  chipInactive: "#292524",
   activeChipShadow: "#172554",
+  headerGradient: ["#6BB8D4", "#A8D8EC", "#D4EEF8"],
 };
 
 /** Household — purple */
@@ -65,8 +88,9 @@ const HOUSEHOLD_PURPLE: ShopHeaderColors = {
   goBtn: "#4c1d95",
   logoCircle: "#fde047",
   logoText: "#4c1d95",
-  chipInactive: "#ffffff",
+  chipInactive: "#292524",
   activeChipShadow: "#2e1065",
+  headerGradient: ["#B8A5F5", "#D4C8FC", "#E8E0FD"],
 };
 
 /** Fruits & vegetables — fresh green */
@@ -78,8 +102,9 @@ const PRODUCE_GREEN: ShopHeaderColors = {
   goBtn: "#14532d",
   logoCircle: "#fef9c3",
   logoText: "#14532d",
-  chipInactive: "#ffffff",
+  chipInactive: "#292524",
   activeChipShadow: "#052e16",
+  headerGradient: ["#7DCE98", "#B8EBC8", "#DCF5E4"],
 };
 
 /** Snacks / packaged — amber */
@@ -91,8 +116,9 @@ const SNACK_AMBER: ShopHeaderColors = {
   goBtn: "#78350f",
   logoCircle: "#ffffff",
   logoText: "#78350f",
-  chipInactive: "#ffffff",
+  chipInactive: "#292524",
   activeChipShadow: "#451a03",
+  headerGradient: ["#E5A814", "#FCD34D", "#FEECC8"],
 };
 
 /** Personal care / beauty — rose */
@@ -104,8 +130,9 @@ const PERSONAL_ROSE: ShopHeaderColors = {
   goBtn: "#881337",
   logoCircle: "#fce7f3",
   logoText: "#881337",
-  chipInactive: "#ffffff",
+  chipInactive: "#292524",
   activeChipShadow: "#4c0519",
+  headerGradient: ["#E895B0", "#F5C8D8", "#FCE4ED"],
 };
 
 /** Frozen / dairy cool tone — slate-teal */
@@ -117,8 +144,9 @@ const FROZEN_TEAL: ShopHeaderColors = {
   goBtn: "#0f766e",
   logoCircle: "#e0f2fe",
   logoText: "#134e4a",
-  chipInactive: "#ffffff",
+  chipInactive: "#292524",
   activeChipShadow: "#042f2e",
+  headerGradient: ["#5CC9B8", "#9EE5D8", "#CFF5EF"],
 };
 
 function norm(k: string): string {
@@ -150,7 +178,7 @@ const KEY_THEMES: Record<string, ShopHeaderColors> = {
 export function getShopHeaderColors(activeKey: string): ShopHeaderColors {
   const k = norm(activeKey);
   if (k === norm(SHOP_HOME) || k === "") {
-    return DAILY_GREEN;
+    return HOME_ORANGE;
   }
   if (KEY_THEMES[k]) {
     return KEY_THEMES[k];

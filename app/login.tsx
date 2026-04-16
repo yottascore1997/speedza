@@ -19,7 +19,7 @@ import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { api, getApiBase, getToken, setSession } from "@/lib/api";
+import { api, clearSession, getApiBase, getToken, setSession } from "@/lib/api";
 import { theme } from "@/lib/theme";
 import {
   RecaptchaVerifier,
@@ -65,6 +65,7 @@ export default function LoginScreen() {
   const [onboardLng, setOnboardLng] = useState<number | null>(null);
   const [onboardImageUri, setOnboardImageUri] = useState<string | null>(null);
   const [savingOnboard, setSavingOnboard] = useState(false);
+  const [bridgeReady, setBridgeReady] = useState(Platform.OS === "web");
   const authBridgeRef = useRef<FirebasePhoneAuthWebHandle>(null);
 
   function normalizePhone10(raw: string) {
@@ -73,19 +74,14 @@ export default function LoginScreen() {
   }
 
   async function routeAfterLogin(user: { role: string }) {
-    if (user.role === "ADMIN") {
-      router.replace("/");
-      return;
-    }
     if (user.role === "STORE_OWNER") {
-      const mine = await api<{ stores: { status: string }[] }>("/api/stores/mine");
-      const hasApproved =
-        mine.ok && mine.data?.stores?.some((s) => s.status === "APPROVED");
-      router.replace(hasApproved ? "/" : "/");
+      router.replace("/store-owner");
       return;
     }
-    if (user.role === "DELIVERY") {
-      router.replace("/delivery");
+    if (user.role !== "CUSTOMER") {
+      await clearSession();
+      Alert.alert("Access restricted", "Only Customer and Store Owner panels are enabled.");
+      router.replace("/login");
       return;
     }
     router.replace("/");
@@ -115,6 +111,10 @@ export default function LoginScreen() {
         setConfirm(result);
       } else {
         setConfirm(null);
+        if (!bridgeReady) {
+          Alert.alert("Please wait", "Secure login is still initializing. Try again in a moment.");
+          return;
+        }
         if (!authBridgeRef.current) {
           Alert.alert("Login", "Phone login is still starting. Wait a second and try again.");
           return;
@@ -126,6 +126,7 @@ export default function LoginScreen() {
     } catch (e: any) {
       if (Platform.OS !== "web") {
         authBridgeRef.current?.reset();
+        setBridgeReady(false);
       }
       const code = e?.code ?? "";
       const msg = e?.message || "Could not send OTP";
@@ -328,6 +329,11 @@ export default function LoginScreen() {
             Sign-in is not available on this build. Install an updated release or contact support.
           </Text>
         ) : null}
+        {Platform.OS !== "web" && nativeFirebaseCfg && !bridgeReady && step === 1 ? (
+          <Text style={styles.configWarn}>
+            Initializing secure login... Please wait 2-3 seconds, then tap Send OTP.
+          </Text>
+        ) : null}
 
         {step === 1 && (
           <>
@@ -340,7 +346,7 @@ export default function LoginScreen() {
               style={inputStyle}
             />
             <Pressable
-              disabled={loading || (Platform.OS !== "web" && !nativeFirebaseCfg)}
+              disabled={loading || (Platform.OS !== "web" && (!nativeFirebaseCfg || !bridgeReady))}
               onPress={() => void sendOtp()}
               style={({ pressed }) => [
                 styles.btnPrimary,
@@ -498,7 +504,11 @@ export default function LoginScreen() {
           })
         : null}
       {Platform.OS !== "web" && nativeFirebaseCfg ? (
-        <FirebasePhoneAuthWebView ref={authBridgeRef} firebaseConfig={nativeFirebaseCfg} />
+        <FirebasePhoneAuthWebView
+          ref={authBridgeRef}
+          firebaseConfig={nativeFirebaseCfg}
+          onReadyChange={setBridgeReady}
+        />
       ) : null}
 
       <View style={{ flex: 1 }}>

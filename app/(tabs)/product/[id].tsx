@@ -4,9 +4,9 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { api } from "@/lib/api";
-import { addToCart } from "@/lib/cart";
 import { theme } from "@/lib/theme";
 import { resolveMediaUrl } from "@/lib/assets";
+import { CartQtyStepper } from "@/components/CartQtyStepper";
 
 type Product = {
   id: string;
@@ -57,28 +57,6 @@ export default function ProductScreen() {
       void load();
     }, [load]),
   );
-
-  async function add() {
-    if (!p) return;
-    if (p.stock < 1) {
-      Alert.alert("Out of stock");
-      return;
-    }
-    await addToCart({
-      productId: p.id,
-      storeId: p.store.id,
-      name: p.name,
-      price: numPrice(p.price),
-      quantity: 1,
-      storeName: p.store.name,
-      imageUrl: p.imageUrl ?? p.imageUrl2 ?? null,
-      unitLabel: p.unitLabel ?? null,
-    });
-    Alert.alert("Added", `${p.name} added to cart`, [
-      { text: "Continue", style: "cancel" },
-      { text: "Go to cart", onPress: () => router.push("/cart") },
-    ]);
-  }
 
   if (loading && !p) {
     return (
@@ -224,19 +202,22 @@ export default function ProductScreen() {
           padding: 16,
         }}
       >
-        <Pressable
-          onPress={() => void add()}
-          disabled={p.stock < 1}
-          style={{
-            backgroundColor: p.stock < 1 ? theme.slateLine : theme.accent,
-            paddingVertical: 16,
-            borderRadius: 16,
+        <CartQtyStepper
+          line={{
+            productId: p.id,
+            storeId: p.store.id,
+            name: p.name,
+            price: price,
+            storeName: p.store.name,
+            imageUrl: p.imageUrl ?? p.imageUrl2 ?? null,
+            unitLabel: p.unitLabel ?? null,
+            mrp: mrp > price ? mrp : undefined,
+            discountPercent:
+              typeof p.discountPercent === "number" && p.discountPercent > 0 ? p.discountPercent : undefined,
           }}
-        >
-          <Text style={{ color: p.stock < 1 ? theme.textDim : "#fff", textAlign: "center", fontWeight: "900", fontSize: 16 }}>
-            {p.stock < 1 ? "Out of stock" : "Add to cart"}
-          </Text>
-        </Pressable>
+          maxQty={p.stock}
+          canAdd={p.stock > 0}
+        />
       </View>
     </View>
   );

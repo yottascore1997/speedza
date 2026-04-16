@@ -14,6 +14,7 @@ import { Image } from "expo-image";
 import { api } from "@/lib/api";
 import { theme } from "@/lib/theme";
 import { resolveMediaUrl } from "@/lib/assets";
+import { ProductPriceOfferRow } from "@/components/ProductPriceOfferRow";
 
 type StoreHit = {
   id: string;
@@ -285,16 +286,12 @@ export default function SearchScreen() {
                         {p.unitLabel}
                       </Text>
                     ) : null}
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 }}>
-                      <Text style={{ color: theme.primary, fontWeight: "900", fontSize: 16 }}>
-                        ₹{Math.round(price * 100) / 100}
-                      </Text>
-                      {mrp > price ? (
-                        <Text style={{ color: theme.textDim, fontWeight: "800", textDecorationLine: "line-through" }}>
-                          ₹{Math.round(mrp * 100) / 100}
-                        </Text>
-                      ) : null}
-                    </View>
+                    <ProductPriceOfferRow
+                      sellingPrice={price}
+                      mrp={mrp}
+                      discountPercent={p.discountPercent}
+                      style={{ marginTop: 6 }}
+                    />
                   </View>
                   <MaterialCommunityIcons name="chevron-right" size={22} color={theme.textDim} />
                 </View>

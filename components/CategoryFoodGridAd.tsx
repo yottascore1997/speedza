@@ -2,8 +2,9 @@ import { View, Text, Pressable, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-/** Warm appetite → fresh green — matches Speedza orange + food energy */
-const FOOD_AD_GRADIENT = ["#ffedd5", "#fdba74", "#f97316", "#16a34a"] as const;
+/** Default high-contrast red promo banner */
+const FOOD_AD_GRADIENT = ["#7f1d1d", "#b91c1c", "#dc2626", "#ef4444"] as const;
+const FOOD_AD_BLUE_GRADIENT = ["#0f172a", "#1d4ed8", "#2563eb", "#38bdf8"] as const;
 
 const cardShadow = Platform.select({
   ios: {
@@ -16,7 +17,7 @@ const cardShadow = Platform.select({
   default: {},
 });
 
-const LINES: { title: string; sub: string; emoji: string; chip: string }[] = [
+const LINES: { title: string; sub: string; emoji: string; chip: string; gradient?: readonly string[] }[] = [
   {
     title: "Bhook max? Fix it now",
     sub: "Search karke dekho — treats wait kar rahe hain",
@@ -28,6 +29,7 @@ const LINES: { title: string; sub: string; emoji: string; chip: string }[] = [
     sub: "Crispy · cheesy · spicy — jo mann kare",
     emoji: "🔥",
     chip: "HOT",
+    gradient: FOOD_AD_BLUE_GRADIENT,
   },
   {
     title: "Chef’s pick for you",
@@ -55,12 +57,12 @@ export function CategoryFoodGridAd({ slot, onPress }: Props) {
         borderRadius: 20,
         overflow: "hidden",
         borderWidth: 1,
-        borderColor: "rgba(234, 88, 12, 0.35)",
+        borderColor: "rgba(127, 29, 29, 0.55)",
         ...cardShadow,
       }}
     >
       <LinearGradient
-        colors={[...FOOD_AD_GRADIENT]}
+        colors={[...(line.gradient ?? FOOD_AD_GRADIENT)]}
         locations={[0, 0.28, 0.58, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -102,18 +104,18 @@ export function CategoryFoodGridAd({ slot, onPress }: Props) {
           <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
             <View
               style={{
-                backgroundColor: "rgba(15,23,42,0.88)",
+                backgroundColor: "rgba(255,255,255,0.2)",
                 paddingHorizontal: 8,
                 paddingVertical: 3,
                 borderRadius: 6,
                 transform: [{ rotate: "-2deg" }],
               }}
             >
-              <Text style={{ color: "#fef08a", fontSize: 10, fontWeight: "900", letterSpacing: 0.6 }}>
+              <Text style={{ color: "#ffffff", fontSize: 10, fontWeight: "900", letterSpacing: 0.6 }}>
                 {line.chip}
               </Text>
             </View>
-            <Text style={{ fontSize: 9, fontWeight: "800", color: "rgba(15,23,42,0.55)", letterSpacing: 1 }}>
+            <Text style={{ fontSize: 9, fontWeight: "800", color: "rgba(255,255,255,0.8)", letterSpacing: 1 }}>
               AD · SPONSORED
             </Text>
           </View>
@@ -121,7 +123,7 @@ export function CategoryFoodGridAd({ slot, onPress }: Props) {
             style={{
               fontSize: 18,
               fontWeight: "900",
-              color: "#0f172a",
+              color: "#ffffff",
               marginTop: 10,
               letterSpacing: -0.4,
               lineHeight: 24,
@@ -134,7 +136,7 @@ export function CategoryFoodGridAd({ slot, onPress }: Props) {
             style={{
               fontSize: 13,
               fontWeight: "700",
-              color: "#1e293b",
+              color: "rgba(255,255,255,0.92)",
               marginTop: 5,
               lineHeight: 18,
             }}
@@ -143,8 +145,8 @@ export function CategoryFoodGridAd({ slot, onPress }: Props) {
             {line.sub}
           </Text>
           <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, gap: 4 }}>
-            <Text style={{ fontSize: 12, fontWeight: "900", color: "#c2410c" }}>Chalo dekhein</Text>
-            <MaterialCommunityIcons name="arrow-right-bold" size={16} color="#c2410c" />
+            <Text style={{ fontSize: 12, fontWeight: "900", color: "#ffffff" }}>Chalo dekhein</Text>
+            <MaterialCommunityIcons name="arrow-right-bold" size={16} color="#ffffff" />
           </View>
         </View>
 

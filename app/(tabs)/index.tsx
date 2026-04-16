@@ -121,6 +121,39 @@ function heroCategoryKey(slideId: string): string {
   return slideId;
 }
 
+function normMainKey(v: string) {
+  return v.trim().toLowerCase().replace(/\s+/g, "-");
+}
+
+function featuredTheme(mainKey: string) {
+  const k = normMainKey(mainKey);
+  if (k.includes("daily") || k.includes("essential") || k.includes("grocery")) {
+    return {
+      shell: ["#86efac", "#4ade80", "#22c55e"] as const,
+      border: "#16a34a",
+      title: "#052e16",
+      sub: "#166534",
+      accent: "#15803d",
+    };
+  }
+  if (k.includes("food") || k.includes("meal")) {
+    return {
+      shell: ["#f8e7aa", "#f9e5a0", "#f4de95"] as const,
+      border: "#e7c768",
+      title: "#7c2d12",
+      sub: "#92400e",
+      accent: "#f59e0b",
+    };
+  }
+  return {
+    shell: ["#f9dbe9", "#f8d5e5", "#f5d0e0"] as const,
+    border: "#e8b6cf",
+    title: "#831843",
+    sub: "#9d174d",
+    accent: "#ec4899",
+  };
+}
+
 export default function ShopHomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -203,24 +236,25 @@ export default function ShopHomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.homeCanvasBg }}>
-      <ShopMarketHeader
-        safeTop={insets.top}
-        mains={mains}
-        activeKey={HEADER_SHOP_ACTIVE}
-        onShopPress={() => router.replace("/")}
-        onCategoryPress={(key) => openCategory(key)}
-      />
       <ScrollView
         style={{ backgroundColor: theme.homeCanvasBg }}
         contentContainerStyle={{
           paddingBottom: 24 + insets.bottom,
-          paddingTop: 8,
         }}
+        stickyHeaderIndices={[0]}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={() => void loadAll()} tintColor={theme.primary} />
+          <RefreshControl refreshing={loading} onRefresh={() => void loadAll()} tintColor={theme.brandNavOrange} />
         }
         showsVerticalScrollIndicator={false}
       >
+        <ShopMarketHeader
+          safeTop={insets.top}
+          mains={mains}
+          activeKey={HEADER_SHOP_ACTIVE}
+          onShopPress={() => router.replace("/")}
+          onCategoryPress={(key) => openCategory(key)}
+        />
+
         <View style={{ paddingHorizontal: 16, marginBottom: 14 }}>
           <View
             style={{
@@ -238,13 +272,34 @@ export default function ShopHomeScreen() {
                 letterSpacing: -0.3,
               }}
             >
-              Today&apos;s match
+              Today&apos;s event
             </Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-              <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: "#22c55e" }} />
-              <Text style={{ fontSize: 10, fontWeight: "700", color: theme.textMuted, letterSpacing: 0.2 }}>
-                Live
-              </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Pressable
+                onPress={() => router.push("/account")}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  borderRadius: 999,
+                  backgroundColor: "#7f1d1d",
+                  borderWidth: 1,
+                  borderColor: "#fecaca",
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                }}
+              >
+                <MaterialCommunityIcons name="file-image-plus-outline" size={16} color="#fff" />
+                <Text style={{ color: "#fff", fontWeight: "900", fontSize: 10.5, letterSpacing: 0.2 }}>
+                  Upload list
+                </Text>
+              </Pressable>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: "#22c55e" }} />
+                <Text style={{ fontSize: 10, fontWeight: "700", color: theme.textMuted, letterSpacing: 0.2 }}>
+                  Live
+                </Text>
+              </View>
             </View>
           </View>
           <View
@@ -271,6 +326,44 @@ export default function ShopHomeScreen() {
               </View>
             )}
           </View>
+          <Pressable
+            onPress={() => router.push("/account")}
+            style={{
+              marginTop: 12,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: "#fecaca",
+              backgroundColor: "#7f1d1d",
+              paddingHorizontal: 14,
+              paddingVertical: 12,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+              ...bannerCardShadow,
+            }}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 12,
+                backgroundColor: "rgba(255,255,255,0.15)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <MaterialCommunityIcons name="file-image-plus-outline" size={22} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: "#fff", fontWeight: "900", fontSize: 14 }}>
+                Upload list photo & order
+              </Text>
+              <Text style={{ color: "rgba(255,255,255,0.88)", fontWeight: "700", fontSize: 11, marginTop: 2 }}>
+                Kirana list ki photo bhejo, admin confirm karke delivery karega.
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={22} color="#fff" />
+          </Pressable>
         </View>
 
         <View style={{ marginHorizontal: 16, marginBottom: 14, borderRadius: 16, ...bannerCardShadow }}>
@@ -468,110 +561,235 @@ export default function ShopHomeScreen() {
             })}
           </View>
 
-          {mains.map((m) => (
-            <View key={`${m.id}-subs`} style={{ marginBottom: 22 }}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  paddingHorizontal: SECTION_PAD,
-                  marginBottom: 10,
-                }}
-              >
-                <Text
-                  style={{
-                    flex: 1,
-                    fontSize: 18,
-                    fontWeight: "900",
-                    color: theme.text,
-                    letterSpacing: -0.3,
-                    paddingRight: 8,
-                  }}
-                  numberOfLines={1}
-                >
-                  {m.name}
-                </Text>
-                <Pressable
-                  onPress={() => openCategory(m.key)}
-                  style={{ flexDirection: "row", alignItems: "center" }}
-                  hitSlop={8}
-                >
-                  <Text style={{ color: theme.primary, fontWeight: "800", fontSize: 13 }}>See all</Text>
-                  <MaterialCommunityIcons name="chevron-right" size={20} color={theme.primary} />
-                </Pressable>
-              </View>
-              {m.subcategories.length === 0 ? null : (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ paddingLeft: SECTION_PAD, paddingRight: 12 }}
-                  decelerationRate="fast"
-                >
-                  {m.subcategories.map((sub, idx) => {
-                    const thumb = sub.imageUrl?.trim() ? resolveMediaUrl(sub.imageUrl) : undefined;
-                    return (
-                      <Pressable
-                        key={sub.id}
-                        onPress={() => openSubcategory(m.key, sub)}
-                        style={{
-                          width: SUB_CARD_W,
-                          marginRight: idx === m.subcategories.length - 1 ? 0 : 12,
-                        }}
+          {mains.map((m) => {
+            const k = normMainKey(m.key);
+            const featured =
+              k.includes("daily") ||
+              k.includes("essential") ||
+              k.includes("food") ||
+              k.includes("personal") ||
+              k.includes("beauty") ||
+              k.includes("care");
+            if (featured) {
+              const th = featuredTheme(m.key);
+              return (
+                <View key={`${m.id}-featured`} style={{ marginBottom: 22, marginHorizontal: SECTION_PAD }}>
+                  <LinearGradient
+                    colors={[...th.shell]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{
+                      borderRadius: 24,
+                      borderWidth: 1.5,
+                      borderColor: th.border,
+                      paddingTop: 14,
+                      paddingBottom: 14,
+                    }}
+                  >
+                    <View style={{ paddingHorizontal: 14 }}>
+                      <Text
+                        style={{ marginTop: 10, fontSize: 20, fontWeight: "900", color: th.title, letterSpacing: -0.5 }}
+                        numberOfLines={1}
                       >
-                        <View
+                        {m.name}
+                      </Text>
+                      <Text style={{ marginTop: 3, fontSize: 16 / 1.2, fontWeight: "600", color: th.sub }} numberOfLines={1}>
+                        Handpicked seasonal finds
+                      </Text>
+                    </View>
+
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={{ paddingLeft: 14, paddingRight: 10, paddingTop: 14 }}
+                      decelerationRate="fast"
+                    >
+                      {m.subcategories.map((sub, idx) => {
+                        const thumb = sub.imageUrl?.trim() ? resolveMediaUrl(sub.imageUrl) : undefined;
+                        return (
+                          <View key={sub.id} style={{ width: 128, marginRight: idx === m.subcategories.length - 1 ? 0 : 9 }}>
+                            <Pressable onPress={() => openSubcategory(m.key, sub)}>
+                              <View style={{ borderRadius: 16, overflow: "hidden", backgroundColor: "#fff", borderWidth: 1, borderColor: "#e5e7eb" }}>
+                                <View style={{ width: "100%", aspectRatio: 1 }}>
+                                  {thumb ? (
+                                    <Image
+                                      source={{ uri: thumb }}
+                                      style={{ width: "100%", height: "100%" }}
+                                      contentFit="cover"
+                                      cachePolicy="memory-disk"
+                                    />
+                                  ) : (
+                                    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#f3f4f6" }}>
+                                      <MaterialCommunityIcons name="tag-outline" size={28} color={theme.textDim} />
+                                    </View>
+                                  )}
+                                  <View style={{ position: "absolute", left: 8, top: 8, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 8, paddingVertical: 3 }}>
+                                    <Text style={{ fontSize: 10, fontWeight: "900", color: "#111827" }}>MUST TRY</Text>
+                                  </View>
+                                  <View style={{ position: "absolute", right: 8, bottom: 8, borderRadius: 999, backgroundColor: "rgba(17,24,39,0.72)", paddingHorizontal: 10, paddingVertical: 4 }}>
+                                    <Text style={{ fontSize: 12, fontWeight: "900", color: "#fff" }}>OPEN</Text>
+                                  </View>
+                                </View>
+                                <Text numberOfLines={2} style={{ minHeight: 42, paddingHorizontal: 9, paddingVertical: 7, fontSize: 13.5, fontWeight: "800", color: "#111827" }}>
+                                  {sub.name}
+                                </Text>
+                              </View>
+                            </Pressable>
+                            <Pressable
+                              onPress={() => openSubcategory(m.key, sub)}
+                              style={{ marginTop: 7, borderRadius: 999, backgroundColor: "#dc2626", paddingVertical: 7, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+                            >
+                              <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900" }}>Browse products</Text>
+                              <MaterialCommunityIcons name="chevron-right" size={16} color="#fff" />
+                            </Pressable>
+                          </View>
+                        );
+                      })}
+                    </ScrollView>
+
+                    <Pressable
+                      onPress={() => openCategory(m.key)}
+                      style={{ marginHorizontal: 14, marginTop: 14, borderRadius: 999, backgroundColor: "#10b981", paddingHorizontal: 14, paddingVertical: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+                    >
+                      <View style={{ flexDirection: "row", marginRight: 12 }}>
+                        {m.subcategories.slice(0, 3).map((sub, i) => {
+                          const thumb = sub.imageUrl?.trim() ? resolveMediaUrl(sub.imageUrl) : undefined;
+                          return (
+                            <View
+                              key={sub.id}
+                              style={{
+                                width: 30,
+                                height: 30,
+                                borderRadius: 15,
+                                overflow: "hidden",
+                                borderWidth: 2,
+                                borderColor: "#fff",
+                                marginLeft: i === 0 ? 0 : -8,
+                                backgroundColor: "#d1fae5",
+                              }}
+                            >
+                              {thumb ? (
+                                <Image source={{ uri: thumb }} style={{ width: "100%", height: "100%" }} contentFit="cover" cachePolicy="memory-disk" />
+                              ) : null}
+                            </View>
+                          );
+                        })}
+                      </View>
+                      <Text style={{ flex: 1, textAlign: "center", fontSize: 15, fontWeight: "900", color: "#fff" }}>
+                        See all subcategories
+                      </Text>
+                      <MaterialCommunityIcons name="chevron-right" size={22} color="#fff" />
+                    </Pressable>
+                  </LinearGradient>
+                </View>
+              );
+            }
+
+            return (
+              <View key={`${m.id}-subs`} style={{ marginBottom: 22 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingHorizontal: SECTION_PAD,
+                    marginBottom: 10,
+                  }}
+                >
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontSize: 18,
+                      fontWeight: "900",
+                      color: theme.text,
+                      letterSpacing: -0.3,
+                      paddingRight: 8,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {m.name}
+                  </Text>
+                  <Pressable
+                    onPress={() => openCategory(m.key)}
+                    style={{ flexDirection: "row", alignItems: "center" }}
+                    hitSlop={8}
+                  >
+                    <Text style={{ color: theme.primary, fontWeight: "800", fontSize: 13 }}>See all</Text>
+                    <MaterialCommunityIcons name="chevron-right" size={20} color={theme.primary} />
+                  </Pressable>
+                </View>
+                {m.subcategories.length === 0 ? null : (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ paddingLeft: SECTION_PAD, paddingRight: 12 }}
+                    decelerationRate="fast"
+                  >
+                    {m.subcategories.map((sub, idx) => {
+                      const thumb = sub.imageUrl?.trim() ? resolveMediaUrl(sub.imageUrl) : undefined;
+                      return (
+                        <Pressable
+                          key={sub.id}
+                          onPress={() => openSubcategory(m.key, sub)}
                           style={{
-                            backgroundColor: theme.bgElevated,
-                            borderRadius: 14,
-                            borderWidth: 1,
-                            borderColor: theme.border,
-                            padding: 8,
-                            ...subCardShadow,
+                            width: SUB_CARD_W,
+                            marginRight: idx === m.subcategories.length - 1 ? 0 : 12,
                           }}
                         >
                           <View
                             style={{
-                              width: "100%",
-                              aspectRatio: 1,
-                              borderRadius: 12,
-                              overflow: "hidden",
-                              backgroundColor: theme.slateLine,
+                              backgroundColor: theme.bgElevated,
+                              borderRadius: 14,
+                              borderWidth: 1,
+                              borderColor: theme.border,
+                              padding: 8,
+                              ...subCardShadow,
                             }}
                           >
-                            {thumb ? (
-                              <Image
-                                source={{ uri: thumb }}
-                                style={{ width: "100%", height: "100%" }}
-                                contentFit="cover"
-                                cachePolicy="memory-disk"
-                              />
-                            ) : (
-                              <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                                <MaterialCommunityIcons name="tag-outline" size={28} color={theme.textDim} />
-                              </View>
-                            )}
+                            <View
+                              style={{
+                                width: "100%",
+                                aspectRatio: 1,
+                                borderRadius: 12,
+                                overflow: "hidden",
+                                backgroundColor: theme.slateLine,
+                              }}
+                            >
+                              {thumb ? (
+                                <Image
+                                  source={{ uri: thumb }}
+                                  style={{ width: "100%", height: "100%" }}
+                                  contentFit="cover"
+                                  cachePolicy="memory-disk"
+                                />
+                              ) : (
+                                <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                                  <MaterialCommunityIcons name="tag-outline" size={28} color={theme.textDim} />
+                                </View>
+                              )}
+                            </View>
+                            <Text
+                              numberOfLines={2}
+                              style={{
+                                marginTop: 8,
+                                fontSize: 12,
+                                fontWeight: "800",
+                                color: theme.text,
+                                lineHeight: 15,
+                                textAlign: "center",
+                              }}
+                            >
+                              {sub.name}
+                            </Text>
                           </View>
-                          <Text
-                            numberOfLines={2}
-                            style={{
-                              marginTop: 8,
-                              fontSize: 12,
-                              fontWeight: "800",
-                              color: theme.text,
-                              lineHeight: 15,
-                              textAlign: "center",
-                            }}
-                          >
-                            {sub.name}
-                          </Text>
-                        </View>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              )}
-            </View>
-          ))}
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                )}
+              </View>
+            );
+          })}
         </View>
 
         {err ? (
@@ -593,15 +811,22 @@ export default function ShopHomeScreen() {
         <View style={{ paddingHorizontal: 16 }}>
           <Pressable
             onPress={() => router.push({ pathname: "/search", params: { q: "" } })}
-            style={{ marginBottom: 16, borderRadius: 14, overflow: "hidden", ...bannerCardShadow }}
+            style={{
+              marginBottom: 16,
+              borderRadius: 14,
+              overflow: "hidden",
+              backgroundColor: theme.adBannerGradient[0],
+              ...bannerCardShadow,
+            }}
             accessibilityRole="button"
             accessibilityLabel="Sponsored offer, open search"
           >
             <LinearGradient
               colors={[...theme.adBannerGradient]}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={{
+                borderRadius: 14,
                 paddingVertical: 12,
                 paddingHorizontal: 14,
                 flexDirection: "row",
@@ -651,76 +876,6 @@ export default function ShopHomeScreen() {
             </LinearGradient>
           </Pressable>
 
-          <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 12 }}>
-            <View>
-              <Text style={{ fontSize: 20, fontWeight: "800", color: theme.text }}>Stores near you</Text>
-              <Text style={{ fontSize: 13, fontWeight: "600", color: theme.textMuted, marginTop: 4 }}>
-                {stores.length} outlet{stores.length !== 1 ? "s" : ""} · by distance
-              </Text>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: theme.primary, marginTop: 6 }}>
-                Free delivery on orders above ₹{FREE_DELIVERY_MIN_SUBTOTAL}
-              </Text>
-            </View>
-          </View>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-            {["Fast delivery", "Verified", "Best offers"].map((chip) => (
-              <View
-                key={chip}
-                style={{
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: theme.border,
-                  backgroundColor: theme.bgElevated,
-                  paddingHorizontal: 10,
-                  paddingVertical: 6,
-                }}
-              >
-                <Text style={{ fontSize: 11, fontWeight: "700", color: theme.textMuted }}>{chip}</Text>
-              </View>
-            ))}
-          </View>
-
-          {stores.map((s) => {
-            const img = resolveMediaUrl(s.imageUrl ?? undefined);
-            return (
-              <Pressable
-                key={s.id}
-                onPress={() => router.push(`/store/${s.id}`)}
-                style={{
-                  backgroundColor: theme.bgElevated,
-                  borderRadius: 16,
-                  borderWidth: 1,
-                  borderColor: theme.border,
-                  marginBottom: 12,
-                  overflow: "hidden",
-                }}
-              >
-                <View style={{ aspectRatio: 16 / 10, backgroundColor: theme.slateLine }}>
-                  {img ? (
-                    <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
-                  ) : (
-                    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                      <MaterialCommunityIcons name="storefront-outline" size={40} color={theme.textDim} />
-                    </View>
-                  )}
-                </View>
-                <View style={{ padding: 14 }}>
-                  <Text style={{ fontSize: 16, fontWeight: "800", color: theme.text }}>{s.name}</Text>
-                  <Text style={{ fontSize: 13, color: theme.textMuted, marginTop: 4 }} numberOfLines={2}>
-                    {s.address}
-                  </Text>
-                  <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8, gap: 8 }}>
-                    <Text style={{ fontSize: 12, fontWeight: "800", color: theme.primary }}>
-                      {s.distanceKm.toFixed(1)} km
-                    </Text>
-                    <Text style={{ fontSize: 11, fontWeight: "600", color: theme.textDim, textTransform: "capitalize" }}>
-                      · {s.shopVertical?.replace(/-/g, " ") || "store"}
-                    </Text>
-                  </View>
-                </View>
-              </Pressable>
-            );
-          })}
         </View>
       </ScrollView>
     </View>

@@ -110,8 +110,6 @@ export default function CategoryHubScreen() {
         activeKey={s}
         onShopPress={() => router.replace("/")}
         onCategoryPress={goCategory}
-        pageTitle={title}
-        onBackPress={() => router.back()}
       />
 
       {err && !loading ? (

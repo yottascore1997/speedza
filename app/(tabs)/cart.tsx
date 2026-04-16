@@ -6,13 +6,14 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { api, getToken } from "@/lib/api";
-import { clearCart, getCart, removeLine, setCart, setLineQuantity, type CartLine } from "@/lib/cart";
+import { clearCart, getCart, setCart, setLineQuantity, type CartLine } from "@/lib/cart";
 import { theme } from "@/lib/theme";
 import { resolveMediaUrl } from "@/lib/assets";
 import { CommonShopHeader } from "@/components/CommonShopHeader";
 import { deliveryFeeForSubtotal, FREE_DELIVERY_MIN_SUBTOTAL } from "@/lib/free-delivery";
 
 const QTY_GREEN = "#16a34a";
+const CART_LINE_IMAGE = 80;
 const CARD = {
   backgroundColor: "#fff",
   borderRadius: 16,
@@ -27,6 +28,24 @@ const CARD = {
 
 function money(n: number) {
   return `₹${Math.round(n * 100) / 100}`;
+}
+
+function numFromApi(v: unknown): number {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+}
+
+function offerPercent(line: CartLine): number | null {
+  if (typeof line.discountPercent === "number" && line.discountPercent > 0) {
+    return Math.round(line.discountPercent);
+  }
+  const mrp = line.mrp ?? 0;
+  if (mrp > line.price && mrp > 0) return Math.round(((mrp - line.price) / mrp) * 100);
+  return null;
 }
 
 export default function CartScreen() {
@@ -72,31 +91,55 @@ export default function CartScreen() {
     }, [refreshLines]),
   );
 
-  /** Older cart rows had no imageUrl; fetch from product API and persist (same as delivery web cart). */
+  /** Older rows: fill image, MRP, discount from product API. */
   useEffect(() => {
-    const missingIds = [...new Set(lines.filter((l) => !l.imageUrl?.trim()).map((l) => l.productId))];
+    const ids = new Set<string>();
+    for (const l of lines) {
+      if (!l.imageUrl?.trim()) ids.add(l.productId);
+      if (l.mrp === undefined) ids.add(l.productId);
+    }
+    const missingIds = [...ids];
     if (missingIds.length === 0) return;
 
     let cancelled = false;
     void (async () => {
-      const updates: Record<string, string> = {};
+      type Pick = {
+        imageUrl?: string | null;
+        imageUrl2?: string | null;
+        mrp?: unknown;
+        discountPercent?: number | null;
+      };
+      const updates: Record<string, { imageUrl?: string | null; mrp: number; discountPercent: number }> = {};
       const slice = missingIds.slice(0, 24);
       await Promise.all(
         slice.map(async (pid) => {
-          const res = await api<{ product: { imageUrl?: string | null; imageUrl2?: string | null } }>(
-            `/api/shop/product/${encodeURIComponent(pid)}`,
-          );
+          const res = await api<{ product: Pick }>(`/api/shop/product/${encodeURIComponent(pid)}`);
           if (!res.ok || !res.data?.product) return;
-          const u =
-            res.data.product.imageUrl?.trim() ||
-            res.data.product.imageUrl2?.trim() ||
-            "";
-          if (u) updates[pid] = u;
+          const pr = res.data.product;
+          const img =
+            pr.imageUrl?.trim() || pr.imageUrl2?.trim() || "";
+          const mrpN = numFromApi(pr.mrp);
+          const disc =
+            typeof pr.discountPercent === "number" && Number.isFinite(pr.discountPercent) ? pr.discountPercent : 0;
+          updates[pid] = {
+            ...(img ? { imageUrl: img } : {}),
+            mrp: mrpN,
+            discountPercent: disc,
+          };
         }),
       );
       if (cancelled || Object.keys(updates).length === 0) return;
       const cart = await getCart();
-      const next = cart.map((l) => (updates[l.productId] ? { ...l, imageUrl: updates[l.productId] } : l));
+      const next = cart.map((l) => {
+        const u = updates[l.productId];
+        if (!u) return l;
+        return {
+          ...l,
+          ...(u.imageUrl ? { imageUrl: u.imageUrl } : {}),
+          mrp: u.mrp,
+          discountPercent: u.discountPercent,
+        };
+      });
       await setCart(next);
       if (!cancelled) setLines(next);
     })();
@@ -119,11 +162,6 @@ export default function CartScreen() {
     if (!line) return;
     const next = line.quantity + delta;
     await setLineQuantity(productId, next);
-    await refreshLines();
-  }
-
-  async function trashLine(productId: string) {
-    await removeLine(productId);
     await refreshLines();
   }
 
@@ -206,16 +244,18 @@ export default function CartScreen() {
         >
           {lines.map((item) => {
             const img = resolveMediaUrl(item.imageUrl ?? undefined);
-            const lineTotal = item.price * item.quantity;
             const unit = item.unitLabel?.trim() || "—";
+            const mrp = item.mrp ?? 0;
+            const showMrp = mrp > item.price;
+            const offPct = offerPercent(item);
             return (
               <View key={item.productId} style={{ ...CARD, padding: 14, marginBottom: 12 }}>
                 <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
                   <View
                     style={{
-                      width: 64,
-                      height: 64,
-                      borderRadius: 12,
+                      width: CART_LINE_IMAGE,
+                      height: CART_LINE_IMAGE,
+                      borderRadius: 14,
                       overflow: "hidden",
                       backgroundColor: theme.slateLine,
                     }}
@@ -223,77 +263,83 @@ export default function CartScreen() {
                     {img ? (
                       <Image
                         source={{ uri: img }}
-                        style={{ width: 64, height: 64 }}
+                        style={{ width: CART_LINE_IMAGE, height: CART_LINE_IMAGE }}
                         contentFit="cover"
                         recyclingKey={item.productId}
                         cachePolicy="memory-disk"
                       />
                     ) : (
                       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                        <MaterialCommunityIcons name="package-variant" size={28} color={theme.textMuted} />
+                        <MaterialCommunityIcons name="package-variant" size={34} color={theme.textMuted} />
                       </View>
                     )}
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={{ fontSize: 16, fontWeight: "900", color: theme.text }} numberOfLines={2}>
-                      {item.name}
-                    </Text>
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: theme.textMuted, marginTop: 4 }}>{unit}</Text>
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 8 }}>
-                      <Text style={{ fontSize: 14, fontWeight: "700", color: theme.textMuted }}>
-                        {money(item.price)} each
+                    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
+                      <Text
+                        style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: "900", color: theme.text }}
+                        numberOfLines={2}
+                      >
+                        {item.name}
                       </Text>
                       <View
                         style={{
-                          backgroundColor: "#ffedd5",
-                          paddingHorizontal: 10,
-                          paddingVertical: 4,
-                          borderRadius: 999,
+                          flexShrink: 0,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          borderWidth: 1.5,
+                          borderColor: QTY_GREEN,
+                          borderRadius: 8,
+                          overflow: "hidden",
                         }}
                       >
-                        <Text style={{ fontSize: 12, fontWeight: "900", color: "#c2410c" }}>Total {money(lineTotal)}</Text>
+                        <Pressable
+                          onPress={() => void changeQty(item.productId, -1)}
+                          style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+                          hitSlop={8}
+                        >
+                          <Text style={{ fontSize: 15, fontWeight: "900", color: QTY_GREEN }}>−</Text>
+                        </Pressable>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontWeight: "900",
+                            color: theme.text,
+                            minWidth: 18,
+                            textAlign: "center",
+                          }}
+                        >
+                          {item.quantity}
+                        </Text>
+                        <Pressable
+                          onPress={() => void changeQty(item.productId, 1)}
+                          style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+                          hitSlop={8}
+                        >
+                          <Text style={{ fontSize: 15, fontWeight: "900", color: QTY_GREEN }}>+</Text>
+                        </Pressable>
                       </View>
                     </View>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: theme.textMuted, marginTop: 4 }}>{unit}</Text>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 8 }}>
+                      <Text style={{ fontSize: 15, fontWeight: "900", color: theme.text }}>{money(item.price)}</Text>
+                      {showMrp ? (
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontWeight: "700",
+                            color: theme.textDim,
+                            textDecorationLine: "line-through",
+                          }}
+                        >
+                          MRP {money(mrp)}
+                        </Text>
+                      ) : null}
+                      {offPct != null && offPct > 0 ? (
+                        <Text style={{ fontSize: 12, fontWeight: "900", color: "#2563eb" }}>{offPct}% OFF</Text>
+                      ) : null}
+                    </View>
                   </View>
-                </View>
-
-                <View
-                  style={{
-                    marginTop: 14,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    alignSelf: "flex-end",
-                    borderWidth: 1.5,
-                    borderColor: QTY_GREEN,
-                    borderRadius: 12,
-                    overflow: "hidden",
-                  }}
-                >
-                  <Pressable
-                    onPress={() => void changeQty(item.productId, -1)}
-                    style={{ paddingHorizontal: 14, paddingVertical: 10 }}
-                    hitSlop={8}
-                  >
-                    <Text style={{ fontSize: 20, fontWeight: "900", color: QTY_GREEN }}>−</Text>
-                  </Pressable>
-                  <Text style={{ fontSize: 16, fontWeight: "900", color: theme.text, minWidth: 28, textAlign: "center" }}>
-                    {item.quantity}
-                  </Text>
-                  <Pressable
-                    onPress={() => void changeQty(item.productId, 1)}
-                    style={{ paddingHorizontal: 14, paddingVertical: 10 }}
-                    hitSlop={8}
-                  >
-                    <Text style={{ fontSize: 20, fontWeight: "900", color: QTY_GREEN }}>+</Text>
-                  </Pressable>
-                  <View style={{ width: 1, alignSelf: "stretch", backgroundColor: "#fecaca" }} />
-                  <Pressable
-                    onPress={() => void trashLine(item.productId)}
-                    style={{ paddingHorizontal: 12, paddingVertical: 10 }}
-                    hitSlop={8}
-                  >
-                    <MaterialCommunityIcons name="delete-outline" size={22} color="#dc2626" />
-                  </Pressable>
                 </View>
               </View>
             );

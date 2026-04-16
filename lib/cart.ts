@@ -27,6 +27,10 @@ export type CartLine = {
   storeName?: string;
   imageUrl?: string | null;
   unitLabel?: string | null;
+  /** Unit MRP when known (for cart display). */
+  mrp?: number | null;
+  /** Server / listing discount % when known. */
+  discountPercent?: number | null;
 };
 
 export function cartTotalQty(lines: CartLine[]): number {
@@ -63,6 +67,8 @@ export async function addToCart(line: Omit<CartLine, "quantity"> & { quantity?: 
       storeName: line.storeName ?? next[idx].storeName,
       imageUrl: line.imageUrl ?? next[idx].imageUrl,
       unitLabel: line.unitLabel ?? next[idx].unitLabel,
+      mrp: line.mrp ?? next[idx].mrp,
+      discountPercent: line.discountPercent ?? next[idx].discountPercent,
     };
   } else {
     next.push({
@@ -74,6 +80,8 @@ export async function addToCart(line: Omit<CartLine, "quantity"> & { quantity?: 
       storeName: line.storeName,
       imageUrl: line.imageUrl,
       unitLabel: line.unitLabel,
+      mrp: line.mrp,
+      discountPercent: line.discountPercent,
     });
   }
   await setCart(next);
