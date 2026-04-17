@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Image, View } from "react-native";
 import { Redirect, Tabs } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { theme } from "@/lib/theme";
@@ -101,8 +101,12 @@ export default function TabsLayout() {
         options={{
           headerShown: false,
           title: "Home",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="home-outline" size={size} color={color} />
+          tabBarIcon: ({ size }) => (
+            <Image
+              source={require("../../assets/home.png")}
+              style={{ width: size + 4, height: size + 4 }}
+              resizeMode="contain"
+            />
           ),
         }}
       />
@@ -122,8 +126,12 @@ export default function TabsLayout() {
           title: "Cart",
           headerShown: false,
           tabBarBadge: badge,
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="cart-outline" size={size} color={color} />
+          tabBarIcon: ({ size }) => (
+            <Image
+              source={require("../../assets/trolley.png")}
+              style={{ width: size + 4, height: size + 4 }}
+              resizeMode="contain"
+            />
           ),
         }}
       />

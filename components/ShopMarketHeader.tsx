@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, Pressable, ScrollView, TextInput, Alert, Platform } from "react-native";
+import { View, Text, Pressable, ScrollView, TextInput, Alert, Platform, Image } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -49,11 +49,11 @@ function normKey(k: string): string {
 function categoryStripIconName(key: string, displayName: string): keyof typeof MaterialCommunityIcons.glyphMap {
   const k = normKey(key);
   const n = displayName.toLowerCase();
-  if (k.includes("food") || n.includes("food") || n.includes("meal")) return "silverware-fork-knife";
+  if (k.includes("food") || n.includes("food") || n.includes("meal")) return "food-apple-outline";
   if (k.includes("beverage") || k.includes("drink") || n.includes("beverage") || n.includes("drink"))
     return "cup-outline";
   if (k.includes("grocery") || k.includes("daily") || k.includes("essential") || n.includes("daily"))
-    return "storefront-outline";
+    return "shopping-outline";
   if (k.includes("household") || n.includes("household") || n.includes("cleaning")) return "spray-bottle";
   if (k.includes("vegetable") || k.includes("fruit") || n.includes("vegetable") || n.includes("fruit"))
     return "carrot";
@@ -251,14 +251,15 @@ export function ShopMarketHeader({
               style={{
                 width: 40,
                 height: 40,
-                borderRadius: 20,
-                backgroundColor: "#ffffff",
                 alignItems: "center",
                 justifyContent: "center",
-                ...iconCircleLift,
               }}
             >
-              <MaterialCommunityIcons name="map-marker" size={22} color="#44403c" />
+              <Image
+                source={require("../assets/map.png")}
+                style={{ width: 34, height: 34 }}
+                resizeMode="contain"
+              />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={{ fontSize: 11, fontWeight: "800", color: "#57534e", letterSpacing: 0.2 }}>
@@ -303,14 +304,16 @@ export function ShopMarketHeader({
               style={{
                 width: 42,
                 height: 42,
-                borderRadius: 21,
-                backgroundColor: "#ffffff",
+                borderRadius: 10,
                 alignItems: "center",
                 justifyContent: "center",
-                ...iconCircleLift,
               }}
             >
-              <MaterialCommunityIcons name="cart-outline" size={22} color="#1c1917" />
+              <Image
+                source={require("../assets/trolley.png")}
+                style={{ width: 38, height: 38 }}
+                resizeMode="contain"
+              />
               {cartCount > 0 ? (
                 <View
                   style={{
@@ -355,15 +358,17 @@ export function ShopMarketHeader({
             <Pressable
               onPress={() => void signOut()}
               style={{
-                paddingHorizontal: 8,
-                paddingVertical: 8,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: "rgba(28, 25, 23, 0.12)",
-                backgroundColor: "rgba(255,255,255,0.65)",
+                paddingHorizontal: 2,
+                paddingVertical: 2,
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              <Text style={{ color: "#44403c", fontWeight: "900", fontSize: 10, letterSpacing: 0.4 }}>OUT</Text>
+              <Image
+                source={require("../assets/switch.png")}
+                style={{ width: 34, height: 34 }}
+                resizeMode="contain"
+              />
             </Pressable>
           </View>
         </View>
@@ -407,18 +412,64 @@ export function ShopMarketHeader({
             const active = activeKey === SHOP_KEY ? isHome : c.key === activeKey;
             const stripIcon = !isHome ? categoryStripIconName(c.key, c.name) : null;
             const inactiveColor = colors.chipInactive;
+            const categoryKey = `${c.key} ${c.name}`.toLowerCase();
+            const isFood = categoryKey.includes("food") || categoryKey.includes("meal");
+            const isDailyEssentials =
+              categoryKey.includes("grocery") || categoryKey.includes("daily") || categoryKey.includes("essential");
+            const isBeverages = categoryKey.includes("beverage") || categoryKey.includes("drink");
+            const isPersonalCare =
+              categoryKey.includes("personal") || categoryKey.includes("beauty") || categoryKey.includes("care");
+            const isSnacks = categoryKey.includes("snack");
             return (
               <Pressable
                 key={c.id}
                 onPress={() => (isHome ? onShopPress() : onCategoryPress(c.key))}
-                style={{ width: 72, alignItems: "center", paddingBottom: 2 }}
+                style={{ width: 76, alignItems: "center", paddingBottom: 2 }}
               >
                 <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: 4, width: "100%" }}>
-                  <MaterialCommunityIcons
-                    name={isHome ? (active ? "home" : "home-outline") : stripIcon!}
-                    size={24}
-                    color={active ? "#0f172a" : inactiveColor}
-                  />
+                  {isHome ? (
+                    <Image
+                      source={require("../assets/home.png")}
+                      style={{ width: 33, height: 33, opacity: active ? 1 : 0.72 }}
+                      resizeMode="contain"
+                    />
+                  ) : isDailyEssentials ? (
+                    <Image
+                      source={require("../assets/shopping-cart.png")}
+                      style={{ width: 33, height: 33, opacity: active ? 1 : 0.72 }}
+                      resizeMode="contain"
+                    />
+                  ) : isFood ? (
+                    <Image
+                      source={require("../assets/balanced-diet.png")}
+                      style={{ width: 33, height: 33, opacity: active ? 1 : 0.72 }}
+                      resizeMode="contain"
+                    />
+                  ) : isPersonalCare ? (
+                    <Image
+                      source={require("../assets/hair.png")}
+                      style={{ width: 33, height: 33, opacity: active ? 1 : 0.72 }}
+                      resizeMode="contain"
+                    />
+                  ) : isSnacks ? (
+                    <Image
+                      source={require("../assets/snaks.png")}
+                      style={{ width: 33, height: 33, opacity: active ? 1 : 0.72 }}
+                      resizeMode="contain"
+                    />
+                  ) : isBeverages ? (
+                    <Image
+                      source={require("../assets/drink.png")}
+                      style={{ width: 33, height: 33 }}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <MaterialCommunityIcons
+                      name={stripIcon!}
+                      size={32}
+                      color={active ? "#0f172a" : inactiveColor}
+                    />
+                  )}
                   <Text
                     numberOfLines={1}
                     ellipsizeMode="tail"
