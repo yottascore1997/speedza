@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Upload Grocery List | Curated Pantry</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "surface-container": "#edeeef",
+                    "tertiary-fixed-dim": "#c8c6c5",
+                    "secondary-fixed-dim": "#61de8a",
+                    "background": "#f8f9fa",
+                    "tertiary": "#5f5e5e",
+                    "surface-dim": "#d9dadb",
+                    "primary-fixed": "#ffdbcc",
+                    "on-primary-container": "#572000",
+                    "on-surface-variant": "#5a4136",
+                    "inverse-primary": "#ffb693",
+                    "on-primary": "#ffffff",
+                    "secondary-container": "#7bf8a1",
+                    "primary-fixed-dim": "#ffb693",
+                    "on-tertiary-container": "#313131",
+                    "on-primary-fixed-variant": "#7a3000",
+                    "outline": "#8e7164",
+                    "on-tertiary-fixed-variant": "#474746",
+                    "surface-container-high": "#e7e8e9",
+                    "surface-variant": "#e1e3e4",
+                    "on-background": "#191c1d",
+                    "on-secondary-container": "#007239",
+                    "on-tertiary-fixed": "#1b1c1c",
+                    "surface-tint": "#a04100",
+                    "on-tertiary": "#ffffff",
+                    "outline-variant": "#e2bfb0",
+                    "on-error-container": "#93000a",
+                    "on-error": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "on-secondary-fixed-variant": "#005228",
+                    "inverse-on-surface": "#f0f1f2",
+                    "primary-container": "#ff6b00",
+                    "inverse-surface": "#2e3132",
+                    "surface-container-low": "#f3f4f5",
+                    "primary": "#a04100",
+                    "secondary-fixed": "#7efba4",
+                    "surface-bright": "#f8f9fa",
+                    "on-surface": "#191c1d",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-secondary-fixed": "#00210c",
+                    "on-primary-fixed": "#351000",
+                    "tertiary-container": "#9a9898",
+                    "secondary": "#006d37",
+                    "surface": "#f8f9fa",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed": "#e5e2e1"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Plus Jakarta Sans"],
+                    "body": ["Manrope"],
+                    "label": ["Manrope"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .font-plus-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .font-manrope { font-family: 'Manrope', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body antialiased pb-24">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 dark:bg-zinc-900/80 backdrop-blur-xl shadow-sm dark:shadow-none flex items-center justify-between px-6 h-16 w-full">
+<div class="flex items-center gap-4">
+<button class="text-orange-600 dark:text-orange-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors p-2 rounded-full active:scale-95 duration-200">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="text-xl font-extrabold text-orange-600 dark:text-orange-500 font-plus-jakarta tracking-tight">Curated Pantry</h1>
+</div>
+<div class="flex items-center">
+<div class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden border border-outline-variant/20">
+<img class="w-full h-full object-cover" data-alt="professional portrait of a young man with a friendly expression in soft studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBp40w0-gZr0SQiyR-Tz6DI1Vs12dgMLQlQiHVt1xzD0W4p0As7tY5R_pLPqKMjwRZcl2SbeqqmIWJP5zGdRHpoMg9QCRZef3jNU6aSsotqEIytItRHZc7qYaz6n9S11cV9ZdUseMoXCeo53COh9qqzzhcOnYkDmI8hpkoLwYe7TIxDhSE-yzXOJyUIvXwlr2f78w7EKhChuserI57iHkW1foSM_m7SulGvvs_T8gX-gJWnA-ONAtx-IXNmfsWBEVNakbnhgKqBw9M"/>
+</div>
+</div>
+</header>
+<main class="mt-20 px-6 max-w-2xl mx-auto space-y-8">
+<!-- Hero Card -->
+<section class="relative overflow-hidden bg-gradient-to-br from-primary-fixed to-surface-container-lowest rounded-[24px] p-8 shadow-[0_12px_24px_rgba(0,0,0,0.04)] border border-outline-variant/10">
+<div class="relative z-10 flex flex-col md:flex-row items-center gap-8">
+<div class="flex-1 space-y-4">
+<h2 class="text-3xl font-extrabold font-headline text-on-surface tracking-tight leading-tight">Upload Your Grocery List</h2>
+<p class="text-on-surface-variant text-md font-medium leading-relaxed">Snap, upload, or type your list — we’ll add items to your cart in seconds.</p>
+<div class="flex flex-col sm:flex-row gap-3 pt-2">
+<button class="bg-gradient-to-r from-primary-container to-primary text-on-primary px-6 py-3 rounded-2xl font-bold text-sm active:scale-95 transition-all shadow-lg shadow-primary/20">
+                            Upload List
+                        </button>
+<button class="bg-surface-container-lowest text-primary px-6 py-3 rounded-2xl font-bold text-sm border border-outline-variant/20 hover:bg-surface-container-low transition-colors">
+                            Type List Manually
+                        </button>
+</div>
+</div>
+<div class="relative w-40 h-40 md:w-48 md:h-48 flex-shrink-0">
+<div class="absolute -top-4 -right-4 w-32 h-32 bg-secondary-container/30 blur-3xl rounded-full"></div>
+<img class="w-full h-full object-cover rounded-3xl rotate-3 shadow-xl transform transition-transform hover:rotate-0" data-alt="artistic composition of a paper grocery bag with fresh vegetables and a neatly written checklist and camera lens" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_M9_l2sGibAgq2-pMgJZ1dzvC6_REheIgdMzCTMyz1d_9XBMeih3EEpbELlndJb__3wKUtb2zhDSWrag_I6Xt37jyYhncZnwJMhwuXeuexiGyAdn_tql9f7SWX0soe4OsTzFHLCw9gUMnqq89ciQ76_HJz8r3gBEd9xB8C2LQ_sxLuwWh0ra-2aWmYUn-B2txQ9okxWBIqB8GEw2auXPsWxHKaSHkVYPWwQdArnokOVULNO2G7Li5RPlcNME1EsB622k3GvIXf7g"/>
+</div>
+</div>
+</section>
+<!-- Smart Benefits Chips -->
+<div class="flex flex-wrap gap-2 justify-center">
+<span class="bg-surface-container-high px-4 py-1.5 rounded-full text-xs font-bold text-on-surface-variant flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">schedule</span> Saves Time
+            </span>
+<span class="bg-surface-container-high px-4 py-1.5 rounded-full text-xs font-bold text-on-surface-variant flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">edit_note</span> Works with Handwriting
+            </span>
+<span class="bg-surface-container-high px-4 py-1.5 rounded-full text-xs font-bold text-on-surface-variant flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">bolt</span> Instant Cart
+            </span>
+<span class="bg-surface-container-high px-4 py-1.5 rounded-full text-xs font-bold text-on-surface-variant flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">history</span> Easy Reorder
+            </span>
+</div>
+<!-- Upload Options -->
+<section class="grid grid-cols-3 gap-4">
+<button class="group flex flex-col items-center justify-center p-4 bg-surface-container-lowest rounded-3xl border border-outline-variant/10 hover:border-primary/30 transition-all active:scale-95 shadow-sm">
+<div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center text-orange-600 mb-2 group-hover:bg-orange-600 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined">photo_camera</span>
+</div>
+<span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Take Photo</span>
+</button>
+<button class="group flex flex-col items-center justify-center p-4 bg-surface-container-lowest rounded-3xl border border-outline-variant/10 hover:border-secondary/30 transition-all active:scale-95 shadow-sm">
+<div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center text-secondary mb-2 group-hover:bg-secondary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined">image</span>
+</div>
+<span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant text-center">Gallery</span>
+</button>
+<button class="group flex flex-col items-center justify-center p-4 bg-surface-container-lowest rounded-3xl border border-outline-variant/10 hover:border-tertiary/30 transition-all active:scale-95 shadow-sm">
+<div class="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-tertiary mb-2 group-hover:bg-tertiary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined">notes</span>
+</div>
+<span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant text-center">Paste Text</span>
+</button>
+</section>
+<!-- How It Works -->
+<section class="bg-surface-container-low rounded-3xl p-6">
+<h3 class="text-sm font-bold text-on-surface-variant uppercase tracking-[0.1em] mb-6 text-center">How It Works</h3>
+<div class="flex items-start justify-between relative">
+<!-- Progress Line -->
+<div class="absolute top-6 left-[10%] right-[10%] h-[2px] bg-outline-variant/20 -z-0"></div>
+<div class="flex flex-col items-center text-center gap-3 relative z-10 flex-1">
+<div class="w-12 h-12 rounded-full bg-surface-container-lowest shadow-sm flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">upload_file</span>
+</div>
+<div>
+<p class="text-[10px] font-bold text-on-surface leading-tight">1. Upload list</p>
+</div>
+</div>
+<div class="flex flex-col items-center text-center gap-3 relative z-10 flex-1">
+<div class="w-12 h-12 rounded-full bg-surface-container-lowest shadow-sm flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">psychology</span>
+</div>
+<div>
+<p class="text-[10px] font-bold text-on-surface leading-tight">2. AI reads items</p>
+</div>
+</div>
+<div class="flex flex-col items-center text-center gap-3 relative z-10 flex-1">
+<div class="w-12 h-12 rounded-full bg-surface-container-lowest shadow-sm flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">shopping_cart_checkout</span>
+</div>
+<div>
+<p class="text-[10px] font-bold text-on-surface leading-tight">3. Review &amp; Pay</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Preview Result Card -->
+<section class="bg-surface-container-lowest rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-outline-variant/5">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+<h3 class="text-md font-bold font-headline">AI Scanned Results</h3>
+</div>
+<span class="text-[11px] font-bold text-secondary uppercase bg-secondary-container/20 px-3 py-1 rounded-full">3 Items Found</span>
+</div>
+<div class="space-y-4 mb-6">
+<div class="flex items-center gap-4 p-3 bg-surface-container-low rounded-2xl group hover:bg-surface-container transition-colors">
+<div class="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="close up of a cold glass bottle of fresh organic milk with condensation" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC87witACZf57Hg5ZHb1SuFZOXGSBC-ZmE8iPzMq47KDz2YWyKed38CEcXnRv1IVmbBRHk-S-mFpXXQPJNSDtTVXpfvTr7a06dulN6xDDYK9iZfMKRo2zGSXgJaW314TInaGyZkSJxiDaJcfCOS_TuteCITf474Vq6vRUZbWdkkwiirwCNsGjaPrFbCidrHPIqGbOekXGwPEI-TDpaRfSQhwH_d4_RSczdnRIUvLogG0eFr57s0jgAJJ7QXNx6ApMFCNnEzhd4kb48"/>
+</div>
+<div class="flex-1">
+<h4 class="text-sm font-bold text-on-surface">Whole Organic Milk</h4>
+<p class="text-xs text-on-surface-variant">Quantity: 2 units</p>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold text-primary">$7.98</p>
+</div>
+</div>
+<div class="flex items-center gap-4 p-3 bg-surface-container-low rounded-2xl group hover:bg-surface-container transition-colors">
+<div class="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="premium basmati rice in a wooden bowl with scattered grains on a dark surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-xYFUnE4cXrLgcl7Qj_OtlfuiZA0C05W6KJcF4W1igwWD4CtTVtBvrg-3QNdmAULyVbAqVeCw3x5KxjtDyGrHLIKw1QM4ROqgkZi1y4Py7no6VS2rfRT-yFJegrfe593S89RpEnb7ZQVmKvLSzagOqXY0wneLVut1sGxagvDry8BRiTP9Z9RiejyUWtJB90pe5lEKbJUZDAjMVcj8ZgQza3H2lG7-mJsJViLwXoDt8hUtfBdCeSjLp5i7YLyT6oZngDBsTdD3LcQ"/>
+</div>
+<div class="flex-1">
+<h4 class="text-sm font-bold text-on-surface">Premium Basmati Rice</h4>
+<p class="text-xs text-on-surface-variant">Weight: 5kg</p>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold text-primary">$12.50</p>
+</div>
+</div>
+<div class="flex items-center gap-4 p-3 bg-surface-container-low rounded-2xl group hover:bg-surface-container transition-colors">
+<div class="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="a carton of brown farm-fresh eggs on a rustic wooden table" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-smiKlESGUFppIWbTyKKTnNQFQNyR_1Qo2tj34QSsSR2qfBD4qkfOb7lz50hq5WdmxqTm3se_TDYZ0f3Cot310ECDiNSpkvRv3ifKKPaeC24rrOEcQFOTi6G4_AAjmKJbkpml4XJFCSrSXxqIQoAybmsSsn1VIQr7EzFsFRPPVKP6P0uBeSl_PZKbsvmZoK1nK577kH6wMTb72gWnk366tTyd8ZdnLIGlz85Y6xbXpch1YR9mJLb3hP4MVbzhfwKqRpmHPzu7kQo"/>
+</div>
+<div class="flex-1">
+<h4 class="text-sm font-bold text-on-surface">Farm Fresh Eggs</h4>
+<p class="text-xs text-on-surface-variant">Quantity: 12 count</p>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold text-primary">$4.95</p>
+</div>
+</div>
+</div>
+<button class="w-full bg-gradient-to-r from-primary-container to-primary text-on-primary py-4 rounded-2xl font-bold text-md active:scale-95 transition-all shadow-xl shadow-primary/10 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+                Add All to Cart ($25.43)
+            </button>
+</section>
+<!-- Trust Layer -->
+<section class="bg-secondary-container/20 rounded-3xl p-6 border border-secondary/10 flex items-center gap-4">
+<div class="w-12 h-12 bg-secondary-container rounded-2xl flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined">verified</span>
+</div>
+<div>
+<h4 class="text-sm font-bold text-on-secondary-container">Quality Guaranteed</h4>
+<p class="text-xs text-on-secondary-container/70">Our AI identifies over 50,000 grocery items with 99.4% accuracy.</p>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-[24px] bg-surface/80 dark:bg-zinc-900/80 backdrop-blur-xl shadow-[0_-4px_24px_rgba(0,0,0,0.06)] flex justify-around items-center h-20 px-4 pb-2">
+<a class="flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500 px-5 py-2 hover:text-orange-500 transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">storefront</span>
+<span class="font-manrope text-[10px] font-semibold tracking-wide uppercase mt-1">Shop</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 rounded-2xl px-5 py-2 active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">receipt_long</span>
+<span class="font-manrope text-[10px] font-semibold tracking-wide uppercase mt-1">List</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500 px-5 py-2 hover:text-orange-500 transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">local_shipping</span>
+<span class="font-manrope text-[10px] font-semibold tracking-wide uppercase mt-1">Orders</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500 px-5 py-2 hover:text-orange-500 transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-manrope text-[10px] font-semibold tracking-wide uppercase mt-1">Profile</span>
+</a>
+</nav>
+</body></html>

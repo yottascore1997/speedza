@@ -78,17 +78,28 @@ export default function ProductScreen() {
   const img2 = resolveMediaUrl(p.imageUrl2 ?? undefined);
   const price = numPrice(p.price);
   const mrp = numPrice(p.mrp);
+  const offPct =
+    typeof p.discountPercent === "number" && p.discountPercent > 0
+      ? Math.round(p.discountPercent)
+      : mrp > price && mrp > 0
+        ? Math.round(((mrp - price) / mrp) * 100)
+        : 0;
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.bg }}>
+    <View style={{ flex: 1, backgroundColor: "#f6f8fb" }}>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
         <View
           style={{
-            borderRadius: 18,
+            borderRadius: 20,
             overflow: "hidden",
             borderWidth: 1,
             borderColor: theme.border,
             backgroundColor: theme.bgElevated,
+            shadowColor: "#0f172a",
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.07,
+            shadowRadius: 14,
+            elevation: 5,
           }}
         >
           <View style={{ aspectRatio: 1, backgroundColor: theme.slateLine }}>
@@ -110,51 +121,66 @@ export default function ProductScreen() {
           ) : null}
         </View>
 
-        <Text style={{ marginTop: 14, color: theme.text, fontWeight: "900", fontSize: 22, letterSpacing: -0.4 }}>
-          {p.name}
-        </Text>
-        <Text style={{ marginTop: 6, color: theme.textMuted, fontWeight: "700" }}>
-          {p.categoryName} · {p.store.name}
-        </Text>
-        {p.unitLabel ? (
-          <Text style={{ marginTop: 6, color: theme.textDim, fontWeight: "800" }}>{p.unitLabel}</Text>
-        ) : null}
-
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 }}>
-          <Text style={{ color: theme.primary, fontWeight: "900", fontSize: 26 }}>
-            ₹{Math.round(price * 100) / 100}
-          </Text>
-          {mrp > price ? (
-            <Text style={{ color: theme.textDim, fontWeight: "900", textDecorationLine: "line-through" }}>
-              ₹{Math.round(mrp * 100) / 100}
-            </Text>
+        <View style={{ marginTop: 12, flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <View style={{ borderRadius: 999, borderWidth: 1, borderColor: "#dbeafe", backgroundColor: "#eff6ff", paddingHorizontal: 10, paddingVertical: 5 }}>
+            <Text style={{ color: "#1d4ed8", fontWeight: "900", fontSize: 11 }}>{p.categoryName}</Text>
+          </View>
+          {p.unitLabel ? (
+            <View style={{ borderRadius: 999, borderWidth: 1, borderColor: "#e5e7eb", backgroundColor: "#ffffff", paddingHorizontal: 10, paddingVertical: 5 }}>
+              <Text style={{ color: theme.textDim, fontWeight: "900", fontSize: 11 }}>{p.unitLabel}</Text>
+            </View>
           ) : null}
-          {typeof p.discountPercent === "number" && p.discountPercent > 0 ? (
-            <View
-              style={{
-                backgroundColor: theme.accentSoft,
-                borderWidth: 1,
-                borderColor: "#fed7aa",
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 999,
-              }}
-            >
-              <Text style={{ color: theme.accent, fontWeight: "900", fontSize: 12 }}>
-                {Math.round(p.discountPercent)}% OFF
-              </Text>
+          {offPct > 0 ? (
+            <View style={{ borderRadius: 999, borderWidth: 1, borderColor: "#86efac", backgroundColor: "#dcfce7", paddingHorizontal: 10, paddingVertical: 5 }}>
+              <Text style={{ color: "#166534", fontWeight: "900", fontSize: 11 }}>{offPct}% OFF</Text>
             </View>
           ) : null}
         </View>
 
-        <View style={{ marginTop: 12 }}>
-          <Text style={{ color: p.stock > 0 ? theme.primaryDark : theme.roseText, fontWeight: "900" }}>
+        <Text style={{ marginTop: 10, color: theme.text, fontWeight: "900", fontSize: 24, letterSpacing: -0.4 }}>
+          {p.name}
+        </Text>
+
+        <View
+          style={{
+            marginTop: 12,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: "#dbe4ef",
+            backgroundColor: "#ffffff",
+            padding: 12,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={{ color: "#1d4ed8", fontWeight: "900", fontSize: 28 }}>
+              ₹{Math.round(price * 100) / 100}
+            </Text>
+            {mrp > price ? (
+              <Text style={{ marginTop: 2, color: theme.textDim, fontWeight: "900", textDecorationLine: "line-through", fontSize: 14 }}>
+                MRP ₹{Math.round(mrp * 100) / 100}
+              </Text>
+            ) : null}
+          </View>
+          <Text style={{ color: p.stock > 0 ? "#166534" : theme.roseText, fontWeight: "900", fontSize: 13 }}>
             {p.stock > 0 ? `In stock (${p.stock})` : "Out of stock"}
           </Text>
         </View>
 
         {p.description?.trim() ? (
-          <View style={{ marginTop: 12 }}>
+          <View
+            style={{
+              marginTop: 14,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: "#e5e7eb",
+              backgroundColor: "#ffffff",
+              padding: 12,
+            }}
+          >
             <Text style={{ color: theme.text, fontWeight: "900", fontSize: 16 }}>Details</Text>
             <Text style={{ marginTop: 6, color: theme.textMuted, fontWeight: "600", lineHeight: 20 }}>
               {p.description}
@@ -168,10 +194,10 @@ export default function ProductScreen() {
             onPress={() => router.push(`/store/${p.store.id}`)}
             style={{
               marginTop: 8,
-              backgroundColor: theme.bgElevated,
-              borderRadius: 14,
+              backgroundColor: "#ffffff",
+              borderRadius: 16,
               borderWidth: 1,
-              borderColor: theme.border,
+              borderColor: "#e5e7eb",
               padding: 14,
               flexDirection: "row",
               alignItems: "center",
@@ -198,10 +224,13 @@ export default function ProductScreen() {
           bottom: 0,
           borderTopWidth: 1,
           borderTopColor: theme.border,
-          backgroundColor: theme.bgElevated,
+          backgroundColor: "#ffffff",
           padding: 16,
         }}
       >
+        <Text style={{ color: theme.text, fontWeight: "900", fontSize: 13, marginBottom: 8 }}>
+          Add to cart
+        </Text>
         <CartQtyStepper
           line={{
             productId: p.id,

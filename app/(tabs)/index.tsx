@@ -81,10 +81,10 @@ const HERO_SLIDES = [
 
 const { width: SCREEN_W } = Dimensions.get("window");
 
-/** 2-column main category tiles under “Shop by category” */
-const CATEGORY_GRID_GAP = 10;
-const CATEGORY_GRID_PAD = 20;
-const categoryTileW = (SCREEN_W - CATEGORY_GRID_PAD * 2 - CATEGORY_GRID_GAP) / 2;
+/** 3-column compact main category tiles under “Shop by category” */
+const CATEGORY_GRID_GAP = 5;
+const CATEGORY_GRID_PAD = 14;
+const categoryTileW = (SCREEN_W - CATEGORY_GRID_PAD * 2 - CATEGORY_GRID_GAP * 2) / 3;
 
 function previewMainCategoryImage(m: MainCategory): string | undefined {
   const hit = m.subcategories.find((s) => s.imageUrl?.trim());
@@ -458,6 +458,44 @@ export default function ShopHomeScreen() {
           </View>
         ) : null}
 
+        <View
+          style={{
+            marginTop: 8,
+            marginHorizontal: 16,
+            marginBottom: 12,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: "#ddd6fe",
+            backgroundColor: "#f5f3ff",
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            ...bannerCardShadow,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+            <View style={{ flex: 1, borderRadius: 12, backgroundColor: "#ede9fe", paddingVertical: 10, paddingHorizontal: 10, borderWidth: 1, borderColor: "#ddd6fe" }}>
+              <Text style={{ color: "#6d28d9", fontWeight: "900", fontSize: 20 }}>₹0 FEES</Text>
+            </View>
+            <View style={{ flex: 1, borderRadius: 12, backgroundColor: "#ede9fe", paddingVertical: 10, paddingHorizontal: 10, borderWidth: 1, borderColor: "#ddd6fe" }}>
+              <Text style={{ color: "#6d28d9", fontWeight: "900", fontSize: 15 }}>EVERYDAY LOWEST PRICES*</Text>
+            </View>
+          </View>
+          <View style={{ marginTop: 9, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <MaterialCommunityIcons name="check-circle" size={12} color="#16a34a" />
+              <Text style={{ color: "#4c1d95", fontSize: 10.5, fontWeight: "800" }}>₹0 Handling Fee</Text>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <MaterialCommunityIcons name="check-circle" size={12} color="#16a34a" />
+              <Text style={{ color: "#4c1d95", fontSize: 10.5, fontWeight: "800" }}>₹0 Delivery Fee*</Text>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <MaterialCommunityIcons name="check-circle" size={12} color="#16a34a" />
+              <Text style={{ color: "#4c1d95", fontSize: 10.5, fontWeight: "800" }}>₹0 Rain & Surge Fee</Text>
+            </View>
+          </View>
+        </View>
+
         <View style={{ marginTop: 12, marginHorizontal: 16, marginBottom: 14, borderRadius: 20, ...bannerCardShadow }}>
           <View style={{ borderRadius: 20, overflow: "hidden", backgroundColor: slide.bg[1] }}>
             <LinearGradient
@@ -593,6 +631,7 @@ export default function ShopHomeScreen() {
             style={{
               flexDirection: "row",
               flexWrap: "wrap",
+              justifyContent: "space-between",
               paddingHorizontal: CATEGORY_GRID_PAD,
               marginBottom: 8,
             }}
@@ -601,22 +640,20 @@ export default function ShopHomeScreen() {
               const img = previewMainCategoryImage(m);
               const n = m.subcategories.length;
               const subLabel = n === 1 ? "1 subcategory" : `${n} subcategories`;
-              const isRightCol = i % 2 === 1;
               return (
                 <Pressable
                   key={m.id}
                   onPress={() => openCategory(m.key)}
                   style={{
                     width: categoryTileW,
-                    marginRight: isRightCol ? 0 : CATEGORY_GRID_GAP,
                     marginBottom: CATEGORY_GRID_GAP,
                   }}
                 >
                   <View
                     style={{
-                      borderRadius: 14,
+                      borderRadius: 12,
                       overflow: "hidden",
-                      aspectRatio: 4 / 3,
+                      aspectRatio: 0.88,
                       backgroundColor: theme.slateLine,
                     }}
                   >
@@ -635,15 +672,15 @@ export default function ShopHomeScreen() {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        paddingTop: 36,
-                        paddingHorizontal: 10,
-                        paddingBottom: 10,
+                        paddingTop: 18,
+                        paddingHorizontal: 7,
+                        paddingBottom: 6,
                       }}
                     >
-                      <Text style={{ color: "#fff", fontSize: 14, fontWeight: "900" }} numberOfLines={2}>
+                      <Text style={{ color: "#fff", fontSize: 10.5, fontWeight: "900" }} numberOfLines={2}>
                         {m.name}
                       </Text>
-                      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: "700", marginTop: 3 }}>
+                      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 9, fontWeight: "700", marginTop: 1 }}>
                         {subLabel}
                       </Text>
                     </LinearGradient>

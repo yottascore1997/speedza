@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>My Cart | Ultra-Premium Grocery</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=Poppins:wght@400;500;600;700&amp;family=Manrope:wght@500;600;700&amp;family=Sora:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-tint": "#9c3f00",
+                      "on-tertiary-fixed-variant": "#576171",
+                      "inverse-on-surface": "#9b9d9e",
+                      "secondary-fixed-dim": "#58e7ab",
+                      "tertiary": "#525c6c",
+                      "surface-container-low": "#eff1f2",
+                      "surface-variant": "#dadddf",
+                      "surface-container": "#e6e8ea",
+                      "primary-fixed-dim": "#f66700",
+                      "surface-bright": "#f5f6f7",
+                      "outline-variant": "#abadae",
+                      "on-secondary-fixed-variant": "#006544",
+                      "tertiary-dim": "#465060",
+                      "on-error": "#ffefec",
+                      "outline": "#757778",
+                      "secondary-dim": "#005c3d",
+                      "on-primary": "#fff0ea",
+                      "surface-container-highest": "#dadddf",
+                      "on-background": "#2c2f30",
+                      "on-error-container": "#520c00",
+                      "error-dim": "#b92902",
+                      "surface-container-lowest": "#ffffff",
+                      "tertiary-container": "#e1ecff",
+                      "on-primary-fixed": "#000000",
+                      "tertiary-fixed-dim": "#d3ddf0",
+                      "on-surface-variant": "#595c5d",
+                      "tertiary-fixed": "#e1ecff",
+                      "secondary-container": "#69f6b8",
+                      "background": "#f5f6f7",
+                      "on-secondary-container": "#005a3c",
+                      "secondary": "#006947",
+                      "inverse-primary": "#fe6b00",
+                      "inverse-surface": "#0c0f10",
+                      "on-primary-fixed-variant": "#4f1c00",
+                      "primary-container": "#ff7a2f",
+                      "primary": "#9c3f00",
+                      "surface": "#f5f6f7",
+                      "on-tertiary-fixed": "#3b4554",
+                      "on-primary-container": "#401500",
+                      "surface-container-high": "#e0e3e4",
+                      "on-secondary": "#c8ffe0",
+                      "on-secondary-fixed": "#00452d",
+                      "primary-fixed": "#ff7a2f",
+                      "on-surface": "#2c2f30",
+                      "secondary-fixed": "#69f6b8",
+                      "error": "#b02500",
+                      "on-tertiary": "#eef3ff",
+                      "on-tertiary-container": "#4d5767",
+                      "surface-dim": "#d1d5d7",
+                      "error-container": "#f95630",
+                      "primary-dim": "#893600"
+              },
+              "borderRadius": {
+                      "DEFAULT": "1rem",
+                      "lg": "2rem",
+                      "xl": "3rem",
+                      "full": "9999px"
+              },
+              "fontFamily": {
+                      "headline": ["Sora", "Plus Jakarta Sans", "sans-serif"],
+                      "body": ["Inter", "sans-serif"],
+                      "label": ["Manrope", "sans-serif"],
+                      "ui": ["Poppins", "sans-serif"]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .glass-header {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f6f7;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface antialiased">
+<!-- Top Navigation Shell -->
+<header class="fixed top-0 w-full z-50 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl transition-shadow duration-300 shadow-sm flex items-center justify-between px-6 h-20">
+<div class="flex items-center gap-4">
+<button class="active:scale-95 transition-transform hover:opacity-80">
+<span class="material-symbols-outlined text-orange-700 dark:text-orange-500 text-2xl" data-icon="arrow_back">arrow_back</span>
+</button>
+<div>
+<h1 class="font-headline font-bold text-xl tracking-tight text-on-surface">My Cart</h1>
+<p class="font-label text-xs text-on-surface-variant font-medium">Ready for checkout</p>
+</div>
+</div>
+<button class="active:scale-95 transition-transform hover:opacity-80 bg-surface-container-low p-2.5 rounded-full">
+<span class="material-symbols-outlined text-orange-700 dark:text-orange-500" data-icon="favorite">favorite</span>
+</button>
+</header>
+<main class="pt-24 pb-44 px-5 max-w-2xl mx-auto space-y-8">
+<!-- Savings Banner -->
+<section class="relative overflow-hidden bg-gradient-to-br from-secondary to-secondary-dim p-6 rounded-lg shadow-lg shadow-secondary/20">
+<div class="relative z-10 flex items-center justify-between">
+<div>
+<h2 class="font-headline text-white text-lg font-bold">You saved ₹128 today 🎉</h2>
+<p class="font-body text-secondary-fixed text-sm opacity-90">Best deals automatically applied.</p>
+</div>
+<div class="bg-white/20 p-2 rounded-full backdrop-blur-md">
+<span class="material-symbols-outlined text-white text-3xl" data-icon="auto_awesome">auto_awesome</span>
+</div>
+</div>
+<div class="absolute -right-4 -bottom-4 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
+</section>
+<!-- Cart Items List -->
+<section class="space-y-4">
+<!-- Item 1 -->
+<div class="bg-surface-container-lowest p-4 rounded-[20px] shadow-sm flex gap-4 items-start border border-outline-variant/10">
+<div class="w-24 h-24 rounded-2xl overflow-hidden bg-surface-container flex-shrink-0">
+<img alt="Fresh Apples" class="w-full h-full object-cover" data-alt="crisp organic red apples in a wooden bowl with soft morning light from a side window" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcdLezRNqAfcrRb6ZuHaOTQXWb7cvWot5x6Vg-pDIX4LI2I-RGpObFHN1Zil9tByyIUZbJ25K77o_5NrbQu7uLLrLL88eRnTZa8-S0payC9pcj7UKtdVfTqIrr_rTDZLOEC_cnF8NouHBMp3fEFIHlNBi7rqHViJTZWggpZhagg4Lw0tjJIcUoA3UdjhM3EoOZca2IbWap-zyrMmohtDVroPBPcuvszKnApar9x3R3G_LYfhr_p8P1eKgQQTbOHyOkKe9zh70nuro"/>
+</div>
+<div class="flex-grow flex flex-col justify-between h-24">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-ui font-semibold text-on-surface leading-tight">Fresh Apples (1kg)</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="font-headline font-bold text-primary">₹180</span>
+<span class="font-body text-xs text-on-surface-variant line-through">₹220</span>
+<span class="font-label text-[10px] font-bold text-secondary-fixed-variant bg-secondary-container px-1.5 py-0.5 rounded-md">18% OFF</span>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-error transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="delete">delete</span>
+</button>
+</div>
+<div class="flex justify-between items-center">
+<button class="font-label text-xs font-semibold text-primary-dim hover:underline underline-offset-4">Save for later</button>
+<div class="flex items-center bg-surface-container-low rounded-full px-2 py-1 gap-3 border border-outline-variant/5">
+<button class="w-6 h-6 rounded-full flex items-center justify-center bg-white text-primary text-lg font-bold shadow-sm active:scale-90">-</button>
+<span class="font-ui font-bold text-sm min-w-[1rem] text-center">1</span>
+<button class="w-6 h-6 rounded-full flex items-center justify-center bg-primary text-white text-lg font-bold shadow-sm active:scale-90">+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="bg-surface-container-lowest p-4 rounded-[20px] shadow-sm flex gap-4 items-start border border-outline-variant/10">
+<div class="w-24 h-24 rounded-2xl overflow-hidden bg-surface-container flex-shrink-0">
+<img alt="Aashirvaad Atta" class="w-full h-full object-cover" data-alt="premium whole wheat flour being poured into a bowl with ears of wheat in the background soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAo69CcXzoPvYTNdyBFyL2jsHLER2AANDXBBz1jYjmmS6-TKYQ3ouOh8_TYeCH6hu1mRVTw1mqk0VAhmyYHDQD_Ig8Af3dGIud2gPsOqKKUxcLmXvYv6Q-1xe9qc5xAmzx1on2vtDUMWR2eGzS0MVPkUEPTyuc-YNrzyhG3OgYaMXYfrvRZ62ytPulbaYSYdz0FgAI-EXgdW98blCesKsc2NFs1vNdKQbT9WSlrYUqnTrwLufKLkDH4lwamtsjKWjhYC6AjD9Hmwqk"/>
+</div>
+<div class="flex-grow flex flex-col justify-between h-24">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-ui font-semibold text-on-surface leading-tight">Aashirvaad Atta (5kg)</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="font-headline font-bold text-primary">₹290</span>
+<span class="font-body text-xs text-on-surface-variant line-through">₹340</span>
+<span class="font-label text-[10px] font-bold text-secondary-fixed-variant bg-secondary-container px-1.5 py-0.5 rounded-md">15% OFF</span>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-error transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="delete">delete</span>
+</button>
+</div>
+<div class="flex justify-between items-center">
+<button class="font-label text-xs font-semibold text-primary-dim hover:underline underline-offset-4">Save for later</button>
+<div class="flex items-center bg-surface-container-low rounded-full px-2 py-1 gap-3 border border-outline-variant/5">
+<button class="w-6 h-6 rounded-full flex items-center justify-center bg-white text-primary text-lg font-bold shadow-sm active:scale-90">-</button>
+<span class="font-ui font-bold text-sm min-w-[1rem] text-center">1</span>
+<button class="w-6 h-6 rounded-full flex items-center justify-center bg-primary text-white text-lg font-bold shadow-sm active:scale-90">+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="bg-surface-container-lowest p-4 rounded-[20px] shadow-sm flex gap-4 items-start border border-outline-variant/10">
+<div class="w-24 h-24 rounded-2xl overflow-hidden bg-surface-container flex-shrink-0">
+<img alt="Amul Milk" class="w-full h-full object-cover" data-alt="two glass bottles of fresh milk on a marble surface with morning light and condensation droplets" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDx4ulLB-P7XHjTsJglblAcL3Z1sCcaf6gywi1rDD1f9XkHGr0yHu-vzShUhPBV9kc7H7ieTEtG6Ha92vRLXrXi4yJSfnbeH57WfI61iPjvon2p3YfahOba2rn3JwQNrmo2Dxn4FZ48pMQNEH7C_joVex-vFiCou1AVCwSVn6jyQFyI2RCrbVDtEyNn41_3KAapvNKINxZyaXmOOCBsoJCRzLude0Sejch0gosiVjNCPRPhH0R7NfIWnmmalLDxWY74PBqTReqsLW0"/>
+</div>
+<div class="flex-grow flex flex-col justify-between h-24">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-ui font-semibold text-on-surface leading-tight">Amul Milk (x2)</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="font-headline font-bold text-primary">₹110</span>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-error transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="delete">delete</span>
+</button>
+</div>
+<div class="flex justify-between items-center">
+<button class="font-label text-xs font-semibold text-primary-dim hover:underline underline-offset-4">Save for later</button>
+<div class="flex items-center bg-surface-container-low rounded-full px-2 py-1 gap-3 border border-outline-variant/5">
+<button class="w-6 h-6 rounded-full flex items-center justify-center bg-white text-primary text-lg font-bold shadow-sm active:scale-90">-</button>
+<span class="font-ui font-bold text-sm min-w-[1rem] text-center">2</span>
+<button class="w-6 h-6 rounded-full flex items-center justify-center bg-primary text-white text-lg font-bold shadow-sm active:scale-90">+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Item 4 -->
+<div class="bg-surface-container-lowest p-4 rounded-[20px] shadow-sm flex gap-4 items-start border border-outline-variant/10">
+<div class="w-24 h-24 rounded-2xl overflow-hidden bg-surface-container flex-shrink-0">
+<img alt="Eggs" class="w-full h-full object-cover" data-alt="dozen farm fresh brown eggs in an open cardboard carton on a white rustic table" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3Omst4QpNWOCpNnQX4HxCO789rr7pOMxyJDy_jyy5XEjDzZ49KAnP75E3Jii4pTv1fQwXZt8azuia984Ji_7rF877WDp5ESFz8p53A4ypb3GjRGnLbOYDyqxjC1dSPPGmIEqaBdTaqWmUn30H229J4aZro5lNTYwkBEmxga1nz8BVC6DGBsTVC6iAF224WcNYO7V16ZMhFYSeRiJN3PJYdFxBKc867Dol_Cs5SjJeyiHs87Tu-ROH8pEihftnmaWcOxI26ivfAuI"/>
+</div>
+<div class="flex-grow flex flex-col justify-between h-24">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-ui font-semibold text-on-surface leading-tight">Eggs (12 Pack)</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="font-headline font-bold text-primary">₹90</span>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-error transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="delete">delete</span>
+</button>
+</div>
+<div class="flex justify-between items-center">
+<button class="font-label text-xs font-semibold text-primary-dim hover:underline underline-offset-4">Save for later</button>
+<div class="flex items-center bg-surface-container-low rounded-full px-2 py-1 gap-3 border border-outline-variant/5">
+<button class="w-6 h-6 rounded-full flex items-center justify-center bg-white text-primary text-lg font-bold shadow-sm active:scale-90">-</button>
+<span class="font-ui font-bold text-sm min-w-[1rem] text-center">1</span>
+<button class="w-6 h-6 rounded-full flex items-center justify-center bg-primary text-white text-lg font-bold shadow-sm active:scale-90">+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Coupon Section -->
+<section class="space-y-4">
+<h4 class="font-ui font-bold text-sm tracking-wide text-on-surface uppercase opacity-60">Apply Coupon</h4>
+<div class="bg-surface-container-low rounded-2xl p-2 flex items-center gap-2 border border-outline-variant/10">
+<div class="flex-grow flex items-center gap-3 pl-3">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="confirmation_number">confirmation_number</span>
+<input class="bg-transparent border-none focus:ring-0 w-full font-body text-sm text-on-surface placeholder-on-surface-variant/50" placeholder="Enter coupon code" type="text"/>
+</div>
+<button class="bg-primary text-white font-ui font-semibold text-xs px-6 py-3 rounded-xl active:scale-95 transition-transform">Apply</button>
+</div>
+<div class="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+<button class="flex-shrink-0 bg-surface-container-lowest border border-primary/20 px-4 py-2 rounded-full font-label text-xs font-bold text-primary-dim hover:bg-primary-container/10 transition-colors">SAVE50</button>
+<button class="flex-shrink-0 bg-surface-container-lowest border border-primary/20 px-4 py-2 rounded-full font-label text-xs font-bold text-primary-dim hover:bg-primary-container/10 transition-colors">FREESHIP</button>
+<button class="flex-shrink-0 bg-surface-container-lowest border border-primary/20 px-4 py-2 rounded-full font-label text-xs font-bold text-primary-dim hover:bg-primary-container/10 transition-colors">NEWUSER</button>
+</div>
+</section>
+<!-- Delivery Section -->
+<section class="bg-surface-container-low rounded-lg p-6 flex items-start gap-4 border border-outline-variant/5">
+<div class="bg-white p-3 rounded-2xl shadow-sm text-primary">
+<span class="material-symbols-outlined" data-icon="home_pin" style="font-variation-settings: 'FILL' 1;">home_pin</span>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-center mb-1">
+<h5 class="font-ui font-bold text-sm text-on-surface">Home: 123, Luxury Heights...</h5>
+<button class="font-label text-xs font-bold text-primary uppercase tracking-wider">Change</button>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-sm" data-icon="timer">timer</span>
+<p class="font-body text-xs text-on-surface-variant">ETA: <span class="font-semibold text-on-surface">15-20 mins</span></p>
+</div>
+</div>
+</section>
+<!-- Bill Summary -->
+<section class="bg-surface-container-lowest rounded-lg p-6 space-y-4 border border-outline-variant/5">
+<h4 class="font-ui font-bold text-sm tracking-wide text-on-surface uppercase opacity-60 pb-2 border-b border-surface-container-high">Bill Summary</h4>
+<div class="space-y-3">
+<div class="flex justify-between items-center">
+<span class="font-body text-sm text-on-surface-variant">Subtotal</span>
+<span class="font-ui font-medium text-sm text-on-surface">₹1,027</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body text-sm text-on-surface-variant">Delivery Fee</span>
+<span class="font-ui font-bold text-sm text-secondary">FREE</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body text-sm text-on-surface-variant">Discount</span>
+<span class="font-ui font-bold text-sm text-secondary">-₹128</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body text-sm text-on-surface-variant">Taxes &amp; Charges</span>
+<span class="font-ui font-medium text-sm text-on-surface">₹0</span>
+</div>
+</div>
+<div class="pt-4 border-t border-surface-container-high flex justify-between items-baseline">
+<span class="font-headline font-extrabold text-on-surface text-lg">Total Amount</span>
+<span class="font-headline font-extrabold text-primary text-2xl tracking-tight">₹899</span>
+</div>
+</section>
+<div class="h-10"></div>
+</main>
+<!-- Sticky Bottom Bar -->
+<footer class="fixed bottom-0 left-0 w-full z-50 px-6 py-4 flex flex-col items-center bg-white/80 dark:bg-neutral-900/80 backdrop-blur-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.06)] rounded-t-[2.5rem]">
+<div class="w-full flex items-center justify-between gap-6 mb-4">
+<div class="flex flex-col">
+<span class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant opacity-60">Grand Total</span>
+<span class="font-headline font-bold text-xl text-on-surface leading-none">₹899</span>
+</div>
+<button class="bg-gradient-to-r from-[#FF7A2F] to-[#9C3F00] text-white rounded-full py-4 px-8 flex-grow flex justify-center items-center shadow-lg shadow-orange-500/20 active:scale-[0.97] transition-transform duration-200 hover:brightness-110">
+<span class="font-ui font-bold tracking-wide">Proceed to Checkout</span>
+<span class="material-symbols-outlined ml-2 text-xl" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+<!-- Safe Area Bar -->
+<div class="w-12 h-1 bg-on-surface-variant/20 rounded-full"></div>
+</footer>
+<!-- Bottom Nav Hidden for Transactional Page -->
+<nav class="hidden">
+<!-- BottomNavBar component would go here if not suppressed -->
+</nav>
+</body></html>

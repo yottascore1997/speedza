@@ -12,6 +12,12 @@ const SHOP_KEY = "__shop__";
 
 const SEARCH_BORDER = "rgba(15, 23, 42, 0.12)";
 const SEARCH_ICON = "#334155";
+const HOME_PROMO_CHIPS = [
+  { label: "Speedza", bg: "#ffffff", text: "#6d28d9" },
+  { label: "50% OFF ZONE", bg: "#111827", text: "#ffffff" },
+  { label: "Super Mall.", bg: "#2563eb", text: "#ffffff" },
+  { label: "Fresh", bg: "#16a34a", text: "#ffffff" },
+] as const;
 
 const headerLift = Platform.select({
   ios: {
@@ -108,6 +114,41 @@ export function ShopMarketHeader({
     return [home, ...mains];
   }, [mains]);
 
+  function findMainKeyByTerms(terms: string[]): string | null {
+    const hit = mains.find((m) => {
+      const hay = `${m.key} ${m.name}`.toLowerCase().replace(/_/g, "-");
+      return terms.some((t) => hay.includes(t));
+    });
+    return hit?.key ?? null;
+  }
+
+  function onPromoChipPress(label: string) {
+    const n = label.toLowerCase();
+    if (n.includes("speedza")) {
+      onShopPress();
+      return;
+    }
+    if (n.includes("fresh")) {
+      const key = findMainKeyByTerms(["fresh", "fruit", "vegetable", "fruits-vegetables"]);
+      if (key) onCategoryPress(key);
+      else onShopPress();
+      return;
+    }
+    if (n.includes("super mall")) {
+      const key = findMainKeyByTerms(["grocery", "daily", "essentials"]);
+      if (key) onCategoryPress(key);
+      else onShopPress();
+      return;
+    }
+    if (n.includes("50%")) {
+      const key = findMainKeyByTerms(["deals", "offers", "sale", "grocery"]);
+      if (key) onCategoryPress(key);
+      else onShopPress();
+      return;
+    }
+    onShopPress();
+  }
+
   const syncCart = useCallback(() => {
     void refreshCartCount(setCartCount);
   }, []);
@@ -200,7 +241,7 @@ export function ShopMarketHeader({
         }}
       />
 
-      <View style={{ paddingTop: safeTop, paddingHorizontal: 16, paddingBottom: 10 }}>
+      <View style={{ paddingTop: safeTop, paddingHorizontal: 16, paddingBottom: 8 }}>
         <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
           <Pressable
             onPress={() => router.push("/profile")}
@@ -328,6 +369,33 @@ export function ShopMarketHeader({
         </View>
       </View>
 
+      <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+          {HOME_PROMO_CHIPS.map((chip) => (
+            <Pressable
+              key={chip.label}
+              onPress={() => onPromoChipPress(chip.label)}
+              style={{
+                flex: 1,
+                minWidth: "22%",
+                borderRadius: 16,
+                paddingHorizontal: 12,
+                minHeight: 52,
+                backgroundColor: chip.bg,
+                borderWidth: 1,
+                borderColor: chip.bg === "#ffffff" ? "rgba(15,23,42,0.08)" : "transparent",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: chip.text, fontWeight: "900", fontSize: 13, textAlign: "center" }} numberOfLines={2}>
+                {chip.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
       <View style={{ paddingTop: 6, paddingBottom: 10 }}>
         <ScrollView
           horizontal
@@ -392,49 +460,56 @@ export function ShopMarketHeader({
           zIndex: 2,
         }}
       >
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            backgroundColor: "#ffffff",
-            borderRadius: 16,
-            paddingLeft: 16,
-            paddingRight: 6,
-            minHeight: 52,
-            borderWidth: 1,
-            borderColor: SEARCH_BORDER,
-            ...headerLift,
-          }}
-        >
-          <MaterialCommunityIcons name="magnify" size={21} color={SEARCH_ICON} />
-          <TextInput
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Search milk, snacks, stores..."
-            placeholderTextColor="#94a3b8"
-            returnKeyType="search"
-            onSubmitEditing={() => goSearch()}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <View
             style={{
               flex: 1,
-              marginLeft: 8,
-              fontSize: 15,
-              fontWeight: "600",
-              color: "#1f2937",
-              paddingVertical: 10,
-              paddingRight: 8,
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: "#ffffff",
+              borderRadius: 14,
+              paddingLeft: 14,
+              paddingRight: 10,
+              minHeight: 50,
+              borderWidth: 1,
+              borderColor: SEARCH_BORDER,
+              ...headerLift,
             }}
-          />
+          >
+            <MaterialCommunityIcons name="magnify" size={22} color={SEARCH_ICON} />
+            <TextInput
+              value={search}
+              onChangeText={setSearch}
+              placeholder='Search for "Iphone"'
+              placeholderTextColor="#6b7280"
+              returnKeyType="search"
+              onSubmitEditing={() => goSearch()}
+              style={{
+                flex: 1,
+                marginLeft: 8,
+                fontSize: 14,
+                fontWeight: "600",
+                color: "#1f2937",
+                paddingVertical: 10,
+              }}
+            />
+          </View>
           <Pressable
             onPress={() => goSearch()}
             style={{
-              backgroundColor: colors.goBtn,
-              paddingHorizontal: 18,
-              paddingVertical: 12,
-              borderRadius: 12,
-              marginVertical: 4,
+              width: 120,
+              minHeight: 50,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: "rgba(30,64,175,0.14)",
+              backgroundColor: "#ffffff",
+              overflow: "hidden",
+              justifyContent: "center",
+              paddingHorizontal: 10,
             }}
           >
-            <Text style={{ color: "#fff", fontWeight: "900", fontSize: 13, letterSpacing: 0.4 }}>GO</Text>
+            <Text style={{ color: "#0891b2", fontWeight: "900", fontSize: 16, lineHeight: 16 }}>Hydration</Text>
+            <Text style={{ color: "#0e7490", fontWeight: "900", fontSize: 16, lineHeight: 16, marginTop: 2 }}>Store</Text>
           </Pressable>
         </View>
 

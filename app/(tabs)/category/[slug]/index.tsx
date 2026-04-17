@@ -40,6 +40,16 @@ function firstPreviewImage(c: CatalogCategory): string | undefined {
   return hit?.imageUrl ? resolveMediaUrl(hit.imageUrl) ?? undefined : undefined;
 }
 
+function isFreshMainCategory(slug: string, title: string): boolean {
+  const k = `${slug} ${title}`.toLowerCase().replace(/_/g, "-");
+  return (
+    k.includes("fresh") ||
+    k.includes("fruit") ||
+    k.includes("vegetable") ||
+    k.includes("fruits-vegetables")
+  );
+}
+
 export default function CategoryHubScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -84,8 +94,10 @@ export default function CategoryHubScreen() {
   const catalogKey = data?.mainCategory?.key ?? s;
   const categories = data?.categories ?? [];
   const showFoodGridAds = isFoodMainCategory(s, title);
+  const showFreshTheme = isFreshMainCategory(s, title);
   const foodCanvas = "#fbf3df";
-  const pageBg = showFoodGridAds ? foodCanvas : theme.bg;
+  const freshCanvas = "#eaf7ff";
+  const pageBg = showFreshTheme ? freshCanvas : showFoodGridAds ? foodCanvas : theme.bg;
 
   function openSub(sub: CatalogCategory) {
     const href =
@@ -147,14 +159,55 @@ export default function CategoryHubScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
-          <CategoryPromoBanner
-            categorySlug={s}
-            categoryName={title}
-            onOrderNow={orderNowFromBanner}
-          />
+          {showFreshTheme ? (
+            <View
+              style={{
+                marginBottom: 12,
+                borderRadius: 18,
+                borderWidth: 1,
+                borderColor: "#bae6fd",
+                overflow: "hidden",
+                backgroundColor: "#dff3ff",
+              }}
+            >
+              <View style={{ alignItems: "center", paddingTop: 14, paddingBottom: 8 }}>
+                <Text style={{ color: "#047857", fontSize: 46, fontWeight: "900", letterSpacing: -0.7 }}>Fresh</Text>
+                <Text style={{ color: "#0e7490", fontSize: 15, fontWeight: "900", marginTop: -2 }}>
+                  Fruits & Vegetables
+                </Text>
+              </View>
+              <View style={{ paddingHorizontal: 10, paddingBottom: 10, flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+                {["Veggies", "Fruits", "Mangoes & Melons", "New Launches"].map((x) => (
+                  <View
+                    key={x}
+                    style={{
+                      flex: 1,
+                      borderRadius: 12,
+                      backgroundColor: "#ffffff",
+                      borderWidth: 1,
+                      borderColor: "#dbeafe",
+                      paddingVertical: 8,
+                      paddingHorizontal: 8,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ color: "#0f172a", fontSize: 11, fontWeight: "800", textAlign: "center" }} numberOfLines={2}>
+                      {x}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : (
+            <CategoryPromoBanner
+              categorySlug={s}
+              categoryName={title}
+              onOrderNow={orderNowFromBanner}
+            />
+          )}
 
           <Text style={{ fontSize: 18, fontWeight: "900", color: "#0c0a09", marginBottom: 12 }}>
-            {showFoodGridAds ? "Explore by category 💜" : title}
+            {showFreshTheme ? "Fresh Fruits & Vegetables" : showFoodGridAds ? "Explore by category 💜" : title}
           </Text>
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
