@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert } from "react-native";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert, Modal } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
@@ -12,7 +12,7 @@ import { resolveMediaUrl } from "@/lib/assets";
 import { CommonShopHeader } from "@/components/CommonShopHeader";
 import { deliveryFeeForSubtotal, FREE_DELIVERY_MIN_SUBTOTAL } from "@/lib/free-delivery";
 
-const QTY_GREEN = "#16a34a";
+const QTY_ORANGE = "#1d4ed8";
 const CART_LINE_IMAGE = 80;
 const CARD = {
   backgroundColor: "#fff",
@@ -48,11 +48,22 @@ function offerPercent(line: CartLine): number | null {
   return null;
 }
 
+function totalDiscount(lines: CartLine[]): number {
+  return lines.reduce((sum, line) => {
+    const mrp = line.mrp ?? line.price;
+    if (mrp <= line.price) return sum;
+    return sum + (mrp - line.price) * line.quantity;
+  }, 0);
+}
+
 export default function CartScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [lines, setLines] = useState<CartLine[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
+  const [showOrderSuccess, setShowOrderSuccess] = useState(false);
+  const [placedOrderId, setPlacedOrderId] = useState("");
   const [deliveryFeePerOrder, setDeliveryFeePerOrder] = useState(25);
   const [freeDeliveryMin, setFreeDeliveryMin] = useState(FREE_DELIVERY_MIN_SUBTOTAL);
   const handlingFee = 0;
@@ -155,6 +166,7 @@ export default function CartScreen() {
   const total = itemsTotal + deliveryFee + handlingFee;
   const amountToFreeDelivery =
     lines.length > 0 && itemsTotal < freeDeliveryMin ? Math.max(0, freeDeliveryMin - itemsTotal) : 0;
+  const discountTotal = totalDiscount(lines);
   const storeId = lines[0]?.storeId;
 
   async function changeQty(productId: string, delta: number) {
@@ -162,6 +174,11 @@ export default function CartScreen() {
     if (!line) return;
     const next = line.quantity + delta;
     await setLineQuantity(productId, next);
+    await refreshLines();
+  }
+
+  async function removeLine(productId: string) {
+    await setLineQuantity(productId, 0);
     await refreshLines();
   }
 
@@ -192,11 +209,21 @@ export default function CartScreen() {
       Alert.alert("Error", res.error || "Order failed");
       return;
     }
+    const oid = res.data?.order.id ?? "";
     await clearCart();
     setLines([]);
-    Alert.alert("Order placed", `Order ${res.data?.order.id?.slice(0, 8)}…`, [
-      { text: "OK", onPress: () => router.push("/orders") },
-    ]);
+    setPlacedOrderId(oid);
+    setShowOrderSuccess(true);
+  }
+
+  function confirmCheckout() {
+    if (submitting) return;
+    setShowCheckoutConfirm(true);
+  }
+
+  function confirmCheckoutYes() {
+    setShowCheckoutConfirm(false);
+    void checkout();
   }
 
   return (
@@ -234,215 +261,380 @@ export default function CartScreen() {
           </Text>
         </View>
       ) : (
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{
-            padding: 16,
-            paddingBottom: 24 + insets.bottom,
-          }}
-          showsVerticalScrollIndicator={false}
-        >
-          {lines.map((item) => {
-            const img = resolveMediaUrl(item.imageUrl ?? undefined);
-            const unit = item.unitLabel?.trim() || "—";
-            const mrp = item.mrp ?? 0;
-            const showMrp = mrp > item.price;
-            const offPct = offerPercent(item);
-            return (
-              <View key={item.productId} style={{ ...CARD, padding: 14, marginBottom: 12 }}>
-                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
-                  <View
-                    style={{
-                      width: CART_LINE_IMAGE,
-                      height: CART_LINE_IMAGE,
-                      borderRadius: 14,
-                      overflow: "hidden",
-                      backgroundColor: theme.slateLine,
-                    }}
-                  >
-                    {img ? (
-                      <Image
-                        source={{ uri: img }}
-                        style={{ width: CART_LINE_IMAGE, height: CART_LINE_IMAGE }}
-                        contentFit="cover"
-                        recyclingKey={item.productId}
-                        cachePolicy="memory-disk"
-                      />
-                    ) : (
-                      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                        <MaterialCommunityIcons name="package-variant" size={34} color={theme.textMuted} />
-                      </View>
-                    )}
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
-                      <Text
-                        style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: "900", color: theme.text }}
-                        numberOfLines={2}
-                      >
-                        {item.name}
-                      </Text>
-                      <View
-                        style={{
-                          flexShrink: 0,
-                          flexDirection: "row",
-                          alignItems: "center",
-                          borderWidth: 1.5,
-                          borderColor: QTY_GREEN,
-                          borderRadius: 8,
-                          overflow: "hidden",
-                        }}
-                      >
-                        <Pressable
-                          onPress={() => void changeQty(item.productId, -1)}
-                          style={{ paddingHorizontal: 8, paddingVertical: 4 }}
-                          hitSlop={8}
-                        >
-                          <Text style={{ fontSize: 15, fontWeight: "900", color: QTY_GREEN }}>−</Text>
-                        </Pressable>
-                        <Text
-                          style={{
-                            fontSize: 12,
-                            fontWeight: "900",
-                            color: theme.text,
-                            minWidth: 18,
-                            textAlign: "center",
-                          }}
-                        >
-                          {item.quantity}
-                        </Text>
-                        <Pressable
-                          onPress={() => void changeQty(item.productId, 1)}
-                          style={{ paddingHorizontal: 8, paddingVertical: 4 }}
-                          hitSlop={8}
-                        >
-                          <Text style={{ fontSize: 15, fontWeight: "900", color: QTY_GREEN }}>+</Text>
-                        </Pressable>
-                      </View>
+        <>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              padding: 16,
+              paddingBottom: 140 + insets.bottom,
+            }}
+            showsVerticalScrollIndicator={false}
+          >
+            <View
+              style={{
+                marginBottom: 14,
+                borderRadius: 18,
+                backgroundColor: "#047857",
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                borderWidth: 1,
+                borderColor: "#059669",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={{ color: "#ecfdf5", fontSize: 22, fontWeight: "900" }}>You saved {money(discountTotal || 0)}</Text>
+                <Text style={{ color: "rgba(236,253,245,0.9)", fontSize: 12, fontWeight: "700", marginTop: 2 }}>
+                  Best deals automatically applied.
+                </Text>
+              </View>
+              <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.16)", alignItems: "center", justifyContent: "center" }}>
+                <MaterialCommunityIcons name="party-popper" size={20} color="#ecfdf5" />
+              </View>
+            </View>
+
+            {lines.map((item) => {
+              const img = resolveMediaUrl(item.imageUrl ?? undefined);
+              const unit = item.unitLabel?.trim() || "—";
+              const mrp = item.mrp ?? 0;
+              const showMrp = mrp > item.price;
+              const offPct = offerPercent(item);
+              return (
+                <View key={item.productId} style={{ ...CARD, padding: 12, marginBottom: 12, borderRadius: 18 }}>
+                  <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+                    <View
+                      style={{
+                        width: CART_LINE_IMAGE,
+                        height: CART_LINE_IMAGE,
+                        borderRadius: 14,
+                        overflow: "hidden",
+                        backgroundColor: theme.slateLine,
+                      }}
+                    >
+                      {img ? (
+                        <Image
+                          source={{ uri: img }}
+                          style={{ width: CART_LINE_IMAGE, height: CART_LINE_IMAGE }}
+                          contentFit="cover"
+                          recyclingKey={item.productId}
+                          cachePolicy="memory-disk"
+                        />
+                      ) : (
+                        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                          <MaterialCommunityIcons name="package-variant" size={34} color={theme.textMuted} />
+                        </View>
+                      )}
                     </View>
-                    <Text style={{ fontSize: 12, fontWeight: "600", color: theme.textMuted, marginTop: 4 }}>{unit}</Text>
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 8 }}>
-                      <Text style={{ fontSize: 15, fontWeight: "900", color: theme.text }}>{money(item.price)}</Text>
-                      {showMrp ? (
-                        <Text
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
+                        <Text style={{ flex: 1, minWidth: 0, fontSize: 20, fontWeight: "900", color: theme.text }} numberOfLines={2}>
+                          {item.name}
+                        </Text>
+                        <Pressable onPress={() => void removeLine(item.productId)} hitSlop={8} style={{ padding: 2 }}>
+                          <MaterialCommunityIcons name="trash-can-outline" size={18} color={theme.textMuted} />
+                        </Pressable>
+                      </View>
+                      <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                        <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 7, flex: 1 }}>
+                        <Text style={{ fontSize: 15, fontWeight: "900", color: "#1d4ed8" }}>{money(item.price * item.quantity)}</Text>
+                          {showMrp ? (
+                            <Text style={{ fontSize: 11, fontWeight: "700", color: theme.textDim, textDecorationLine: "line-through" }}>
+                              {money(mrp * item.quantity)}
+                            </Text>
+                          ) : null}
+                          {offPct != null && offPct > 0 ? (
+                            <View style={{ backgroundColor: "#dcfce7", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+                              <Text style={{ fontSize: 10, fontWeight: "900", color: "#059669" }}>{offPct}% OFF</Text>
+                            </View>
+                          ) : null}
+                        </View>
+                        <View
                           style={{
-                            fontSize: 12,
-                            fontWeight: "700",
-                            color: theme.textDim,
-                            textDecorationLine: "line-through",
+                            flexShrink: 0,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            borderWidth: 1,
+                            borderColor: "#dbeafe",
+                            borderRadius: 999,
+                            overflow: "hidden",
+                            backgroundColor: "#eff6ff",
                           }}
                         >
-                          MRP {money(mrp)}
-                        </Text>
-                      ) : null}
-                      {offPct != null && offPct > 0 ? (
-                        <Text style={{ fontSize: 12, fontWeight: "900", color: "#2563eb" }}>{offPct}% OFF</Text>
-                      ) : null}
+                          <Pressable onPress={() => void changeQty(item.productId, -1)} style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }} hitSlop={8}>
+                            <Text style={{ fontSize: 18, fontWeight: "900", color: QTY_ORANGE }}>−</Text>
+                          </Pressable>
+                          <Text style={{ fontSize: 14, fontWeight: "900", color: theme.text, minWidth: 28, textAlign: "center" }}>{item.quantity}</Text>
+                          <Pressable
+                            onPress={() => void changeQty(item.productId, 1)}
+                            style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center", backgroundColor: "#bfdbfe" }}
+                            hitSlop={8}
+                          >
+                            <Text style={{ fontSize: 18, fontWeight: "900", color: "#1e3a8a" }}>+</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: theme.textMuted, marginTop: 4 }}>{unit}</Text>
                     </View>
                   </View>
                 </View>
+              );
+            })}
+
+            <View style={{ ...CARD, marginBottom: 12, paddingVertical: 12, paddingHorizontal: 12, borderRadius: 16 }}>
+              <Text style={{ fontSize: 11, fontWeight: "800", color: theme.textMuted, letterSpacing: 1 }}>APPLY COUPON</Text>
+              <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#f3f4f6", borderRadius: 999, padding: 5 }}>
+                <View style={{ width: 30, alignItems: "center" }}>
+                  <MaterialCommunityIcons name="ticket-percent-outline" size={17} color={theme.textMuted} />
+                </View>
+                <Text style={{ flex: 1, color: theme.textDim, fontWeight: "700", fontSize: 12 }}>Enter coupon code</Text>
+                <Pressable style={{ backgroundColor: "#2563eb", borderRadius: 999, paddingHorizontal: 18, paddingVertical: 8 }}>
+                  <Text style={{ color: "#fff", fontWeight: "900", fontSize: 12 }}>Apply</Text>
+                </Pressable>
               </View>
-            );
-          })}
+              <View style={{ marginTop: 10, flexDirection: "row", gap: 8 }}>
+                {["SAVE50", "FREESHIP", "NEWUSER"].map((code) => (
+                  <View key={code} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: "#fff7ed", borderWidth: 1, borderColor: "#fed7aa" }}>
+                    <Text style={{ color: "#9a3412", fontWeight: "800", fontSize: 10 }}>{code}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <View style={{ ...CARD, padding: 14, marginBottom: 12, borderRadius: 16 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                  <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#f3f4f6", alignItems: "center", justifyContent: "center" }}>
+                    <MaterialCommunityIcons name="map-marker-radius-outline" size={18} color="#9ca3af" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: theme.text, fontWeight: "800", fontSize: 13 }} numberOfLines={1}>
+                      Home: 123, Luxury Heights...
+                    </Text>
+                    <Text style={{ color: theme.textMuted, fontWeight: "700", fontSize: 11, marginTop: 2 }}>ETA 15-20 mins</Text>
+                  </View>
+                </View>
+                <Pressable>
+                  <Text style={{ color: "#2563eb", fontWeight: "900", fontSize: 11 }}>CHANGE</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            <View style={{ ...CARD, padding: 16, marginTop: 2, borderRadius: 18 }}>
+              <Text style={{ fontSize: 11, fontWeight: "800", color: theme.textMuted, letterSpacing: 1 }}>BILL SUMMARY</Text>
+              <View style={{ marginTop: 14, gap: 10 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ color: theme.textMuted, fontWeight: "600" }}>Subtotal</Text>
+                  <Text style={{ color: theme.text, fontWeight: "800" }}>{money(itemsTotal)}</Text>
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ color: theme.textMuted, fontWeight: "600" }}>Delivery Fee</Text>
+                  <Text style={{ color: deliveryFee === 0 ? "#059669" : theme.text, fontWeight: "800" }}>
+                    {lines.length > 0 && deliveryFee === 0 ? "FREE" : money(deliveryFee)}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ color: theme.textMuted, fontWeight: "600" }}>Discount</Text>
+                  <Text style={{ color: "#059669", fontWeight: "800" }}>-{money(discountTotal)}</Text>
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ color: theme.textMuted, fontWeight: "600" }}>Taxes & Charges</Text>
+                  <Text style={{ color: theme.text, fontWeight: "800" }}>{money(handlingFee)}</Text>
+                </View>
+              </View>
+              <View style={{ height: 1, backgroundColor: theme.border, marginVertical: 14 }} />
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" }}>
+                <Text style={{ fontSize: 25, fontWeight: "900", color: theme.text }}>Total Amount</Text>
+                <Text style={{ fontSize: 28, fontWeight: "900", color: "#1d4ed8" }}>{money(total)}</Text>
+              </View>
+              <Text style={{ fontSize: 12, fontWeight: "600", color: theme.textMuted, marginTop: 6 }}>
+                {amountToFreeDelivery > 0 ? `Add ${money(amountToFreeDelivery)} more for free delivery` : "Free delivery unlocked on this order"}
+              </Text>
+            </View>
+          </ScrollView>
 
           <View
             style={{
-              marginBottom: 12,
-              paddingVertical: 10,
-              paddingHorizontal: 12,
-              borderRadius: 12,
-              backgroundColor: theme.primarySoft,
+              position: "absolute",
+              left: 16,
+              right: 16,
+              bottom: 12 + insets.bottom,
+              borderRadius: 18,
+              backgroundColor: "#fff",
               borderWidth: 1,
-              borderColor: "#a7f3d0",
+              borderColor: "#e5e7eb",
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.1,
+              shadowRadius: 14,
+              elevation: 8,
             }}
           >
-            <Text
-              style={{
-                fontSize: 12,
-                fontWeight: "800",
-                color: theme.primary,
-                textAlign: "center",
-              }}
-            >
-              Free delivery on orders above ₹{freeDeliveryMin}
-            </Text>
-            {amountToFreeDelivery > 0 ? (
-              <Text
-                style={{
-                  marginTop: 4,
-                  fontSize: 11,
-                  fontWeight: "600",
-                  color: theme.textMuted,
-                  textAlign: "center",
-                }}
-              >
-                Add {money(amountToFreeDelivery)} more to unlock free delivery
-              </Text>
-            ) : lines.length > 0 ? (
-              <Text
-                style={{
-                  marginTop: 4,
-                  fontSize: 11,
-                  fontWeight: "700",
-                  color: "#059669",
-                  textAlign: "center",
-                }}
-              >
-                You unlocked free delivery on this order
-              </Text>
-            ) : null}
-          </View>
-
-          <View style={{ ...CARD, padding: 16, marginTop: 4 }}>
-            <Text style={{ fontSize: 11, fontWeight: "800", color: theme.textMuted, letterSpacing: 1 }}>BILL SUMMARY</Text>
-            <View style={{ marginTop: 14, gap: 10 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: theme.textMuted, fontWeight: "600" }}>Items</Text>
-                <Text style={{ color: theme.text, fontWeight: "800" }}>{itemCount}</Text>
-              </View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: theme.textMuted, fontWeight: "600" }}>Subtotal</Text>
-                <Text style={{ color: theme.text, fontWeight: "800" }}>{money(itemsTotal)}</Text>
-              </View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: theme.textMuted, fontWeight: "600" }}>Delivery</Text>
-                <Text
-                  style={{
-                    color: deliveryFee === 0 ? "#059669" : theme.text,
-                    fontWeight: "800",
-                  }}
-                >
-                  {lines.length > 0 && deliveryFee === 0 ? "FREE" : money(deliveryFee)}
-                </Text>
-              </View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: theme.textMuted, fontWeight: "600" }}>Handling</Text>
-                <Text style={{ color: theme.text, fontWeight: "800" }}>{money(handlingFee)}</Text>
-              </View>
+            <View>
+              <Text style={{ color: theme.textMuted, fontWeight: "800", fontSize: 10, letterSpacing: 0.8 }}>GRAND TOTAL</Text>
+              <Text style={{ color: theme.text, fontWeight: "900", fontSize: 20 }}>{money(total)}</Text>
+              <Text style={{ color: theme.textMuted, fontWeight: "700", fontSize: 10 }}>{itemCount} items</Text>
             </View>
-            <View style={{ height: 1, backgroundColor: theme.border, marginVertical: 14 }} />
-            <Text style={{ fontSize: 11, fontWeight: "800", color: theme.textMuted, letterSpacing: 0.8 }}>TO PAY</Text>
-            <Text style={{ fontSize: 28, fontWeight: "900", color: theme.text, marginTop: 6 }}>{money(total)}</Text>
-            <Text style={{ fontSize: 12, fontWeight: "600", color: theme.textMuted, marginTop: 4 }}>
-              Incl. taxes as applicable · COD
-            </Text>
             {submitting ? (
-              <ActivityIndicator color={theme.brandNavOrange} style={{ marginTop: 16 }} />
+              <View style={{ flex: 1, alignItems: "center" }}>
+                <ActivityIndicator color={theme.brandNavOrange} />
+              </View>
             ) : (
-              <Pressable onPress={() => void checkout()} style={{ marginTop: 16, borderRadius: 14, overflow: "hidden" }}>
+              <Pressable onPress={confirmCheckout} style={{ flex: 1, borderRadius: 999, overflow: "hidden" }}>
                 <LinearGradient
-                  colors={[...theme.placeOrderGradient]}
+                  colors={["#3b82f6", "#2563eb"]}
                   start={{ x: 0, y: 0.5 }}
                   end={{ x: 1, y: 0.5 }}
-                  style={{ paddingVertical: 16, alignItems: "center" }}
+                  style={{ paddingVertical: 15, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
                 >
-                  <Text style={{ color: "#fff", fontWeight: "900", fontSize: 17 }}>Place order</Text>
+                  <Text style={{ color: "#fff", fontWeight: "900", fontSize: 18 }}>Place Order</Text>
+                  <MaterialCommunityIcons name="chevron-right" size={18} color="#fff" />
                 </LinearGradient>
               </Pressable>
             )}
           </View>
-        </ScrollView>
+        </>
       )}
+      <Modal transparent visible={showCheckoutConfirm} animationType="fade" onRequestClose={() => setShowCheckoutConfirm(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(2,6,23,0.5)", paddingHorizontal: 20, alignItems: "center", justifyContent: "center" }}>
+          <View
+            style={{
+              width: "100%",
+              maxWidth: 360,
+              borderRadius: 22,
+              backgroundColor: "#ffffff",
+              borderWidth: 1,
+              borderColor: "#dbeafe",
+              paddingHorizontal: 18,
+              paddingVertical: 18,
+              shadowColor: "#0f172a",
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.2,
+              shadowRadius: 20,
+              elevation: 12,
+            }}
+          >
+            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#eff6ff", alignItems: "center", justifyContent: "center", alignSelf: "center", marginBottom: 10 }}>
+              <MaterialCommunityIcons name="cart-check" size={24} color="#2563eb" />
+            </View>
+            <Text style={{ textAlign: "center", color: "#0f172a", fontWeight: "900", fontSize: 20 }}>Place Order</Text>
+            <Text style={{ textAlign: "center", color: "#475569", fontWeight: "700", fontSize: 15, marginTop: 6, lineHeight: 22 }}>
+              Are you sure you want to proceed?
+            </Text>
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
+              <Pressable
+                onPress={confirmCheckoutYes}
+                style={{
+                  flex: 1,
+                  borderRadius: 12,
+                  backgroundColor: "#2563eb",
+                  paddingVertical: 12,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ color: "#fff", fontWeight: "900", fontSize: 14 }}>Yes</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setShowCheckoutConfirm(false)}
+                style={{
+                  flex: 1,
+                  borderRadius: 12,
+                  backgroundColor: "#f1f5f9",
+                  borderWidth: 1,
+                  borderColor: "#cbd5e1",
+                  paddingVertical: 12,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ color: "#334155", fontWeight: "800", fontSize: 14 }}>No</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal transparent visible={showOrderSuccess} animationType="fade" onRequestClose={() => setShowOrderSuccess(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(2,6,23,0.45)", paddingHorizontal: 20, alignItems: "center", justifyContent: "center" }}>
+          <View
+            style={{
+              width: "100%",
+              maxWidth: 360,
+              borderRadius: 24,
+              backgroundColor: "#ffffff",
+              borderWidth: 1,
+              borderColor: "#bfdbfe",
+              paddingHorizontal: 18,
+              paddingVertical: 20,
+              shadowColor: "#0f172a",
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.2,
+              shadowRadius: 20,
+              elevation: 12,
+            }}
+          >
+            <LinearGradient
+              colors={["#dbeafe", "#93c5fd"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ width: 54, height: 54, borderRadius: 27, alignItems: "center", justifyContent: "center", alignSelf: "center", marginBottom: 12 }}
+            >
+              <MaterialCommunityIcons name="check-bold" size={28} color="#1e3a8a" />
+            </LinearGradient>
+            <Text style={{ textAlign: "center", color: "#0f172a", fontWeight: "900", fontSize: 22 }}>Order Placed</Text>
+            <Text style={{ textAlign: "center", color: "#475569", fontWeight: "700", fontSize: 14, marginTop: 6, lineHeight: 21 }}>
+              Your order has been placed successfully.
+            </Text>
+            {placedOrderId ? (
+              <View style={{ marginTop: 12, alignSelf: "center", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: "#eff6ff", borderWidth: 1, borderColor: "#dbeafe" }}>
+                <Text style={{ color: "#1d4ed8", fontWeight: "900", fontSize: 12 }}>Order ID: {placedOrderId.slice(0, 8)}...</Text>
+              </View>
+            ) : null}
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 18 }}>
+              <Pressable
+                onPress={() => {
+                  setShowOrderSuccess(false);
+                  router.push("/");
+                }}
+                style={{
+                  flex: 1,
+                  borderRadius: 12,
+                  backgroundColor: "#f1f5f9",
+                  borderWidth: 1,
+                  borderColor: "#cbd5e1",
+                  paddingVertical: 12,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ color: "#334155", fontWeight: "800", fontSize: 14 }}>Continue</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setShowOrderSuccess(false);
+                  router.push("/orders");
+                }}
+                style={{
+                  flex: 1,
+                  borderRadius: 12,
+                  backgroundColor: "#2563eb",
+                  paddingVertical: 12,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ color: "#fff", fontWeight: "900", fontSize: 14 }}>View Order</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

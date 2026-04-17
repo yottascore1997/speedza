@@ -22,19 +22,19 @@ export type ShopHeaderColors = {
 
 const SHOP_HOME = "__shop__";
 
-/** Home default — warm orange stack */
+/** Home default — food-like warm tone, slightly darker */
 const HOME_ORANGE: ShopHeaderColors = {
-  topBar: "#9a3412",
-  categoryBar: "#ea580c",
-  searchBand: "#fb923c",
-  deliverGold: "#ffedd5",
-  goBtn: "#c2410c",
+  topBar: "#3a2217",
+  categoryBar: "#9a4521",
+  searchBand: "#bc6130",
+  deliverGold: "#e6c79f",
+  goBtn: "#3a2217",
   logoCircle: "#ffffff",
-  logoText: "#7c2d12",
+  logoText: "#3a2217",
   chipInactive: "#292524",
-  activeChipShadow: "#7c2d12",
-  /** Shop home — clear orange wash (tab Home / daily essentials) */
-  headerGradient: ["#fb923c", "#fdba74", "#fff4e6"],
+  activeChipShadow: "#4a1f0f",
+  /** Shop home — warm food-style gradient (slightly deeper) */
+  headerGradient: ["#c98d63", "#e6b08b", "#f7dfcd"],
 };
 
 /** Daily essentials — green stack */

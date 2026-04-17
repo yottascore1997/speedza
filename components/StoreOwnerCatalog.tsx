@@ -427,7 +427,7 @@ export function StoreOwnerCatalog({
       </View>
 
       {/* Storefront cover */}
-      <CatSection title="Shop cover" hint="This image appears as the hero on your public storefront.">
+      <CatSection title="Shop Cover">
         <View style={[cardWrap, { overflow: "hidden", padding: 0 }]}>
           <View style={{ height: 168, backgroundColor: CAT.inputBg }}>
             {coverUri ? (
@@ -492,7 +492,7 @@ export function StoreOwnerCatalog({
       </CatSection>
 
       {/* Hours */}
-      <CatSection title="Business hours" hint="Customers only see these times when the switch is on.">
+      <CatSection title="Opening Hours">
         <View style={[cardWrap, { padding: 16 }]}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -500,15 +500,15 @@ export function StoreOwnerCatalog({
                 <MaterialCommunityIcons name="clock-outline" size={24} color={CAT.btnSolidDark} />
               </View>
               <View>
-                <Text style={{ color: CAT.ink, fontWeight: "800", fontSize: 15, fontFamily: FONT_DISPLAY }}>Open to shoppers</Text>
-                <Text style={{ color: CAT.muted, fontWeight: "600", fontSize: 12, marginTop: 2, fontFamily: FONT_BODY }}>Uses 24-hour times</Text>
+                <Text style={{ color: CAT.ink, fontWeight: "800", fontSize: 15, fontFamily: FONT_DISPLAY }}>Store timing</Text>
+                <Text style={{ color: CAT.muted, fontWeight: "600", fontSize: 12, marginTop: 2, fontFamily: FONT_BODY }}>24-hour format</Text>
               </View>
             </View>
             <Switch value={hoursEnabled} onValueChange={setHoursEnabled} trackColor={{ false: "#d6d3d1", true: "#86efac" }} thumbColor="#fff" />
           </View>
           <View style={{ flexDirection: "row", gap: 12, marginTop: 14 }}>
             <View style={{ flex: 1 }}>
-              <Text style={labelStyle}>Opens</Text>
+              <Text style={labelStyle}>Opens at</Text>
               <TextInput
                 value={openAt}
                 onChangeText={setOpenAt}
@@ -528,7 +528,7 @@ export function StoreOwnerCatalog({
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={labelStyle}>Closes</Text>
+              <Text style={labelStyle}>Closes at</Text>
               <TextInput
                 value={closeAt}
                 onChangeText={setCloseAt}
@@ -554,17 +554,17 @@ export function StoreOwnerCatalog({
             style={{ marginTop: 14, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: CAT.btnSolid, borderWidth: 0, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 12, opacity: saving ? 0.65 : 1 }}
           >
             <MaterialCommunityIcons name="content-save-outline" size={20} color="#ffffff" />
-            <Text style={{ color: "#ffffff", fontWeight: "800", fontSize: 13, fontFamily: FONT_DISPLAY }}>Save hours</Text>
+            <Text style={{ color: "#ffffff", fontWeight: "800", fontSize: 13, fontFamily: FONT_DISPLAY }}>Save</Text>
           </Pressable>
         </View>
       </CatSection>
 
       {/* Import */}
-      <CatSection title="Bulk import" hint="Pull ready-made products from Speedza’s master list into your shop. You can edit prices after.">
+      <CatSection title="Quick Import Catalog">
         <View style={[cardWrap, { padding: 16, backgroundColor: "#f7fdf9", borderColor: "#d1fae5" }]}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
             <MaterialCommunityIcons name="database-import" size={26} color={CAT.green} />
-            <Text style={{ color: "#14532d", fontWeight: "800", fontSize: 16, fontFamily: FONT_DISPLAY, flex: 1 }}>Template category</Text>
+            <Text style={{ color: "#14532d", fontWeight: "800", fontSize: 16, fontFamily: FONT_DISPLAY, flex: 1 }}>Select category</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
             <View style={{ flexDirection: "row", gap: 8 }}>
@@ -594,23 +594,23 @@ export function StoreOwnerCatalog({
             style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: CAT.btnSolid, borderRadius: 14, paddingVertical: 14, opacity: saving || !importMcId ? 0.55 : 1 }}
           >
             <MaterialCommunityIcons name="download-circle" size={22} color="#fff" />
-            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15, fontFamily: FONT_DISPLAY }}>Import products</Text>
+            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15, fontFamily: FONT_DISPLAY }}>Import</Text>
           </Pressable>
         </View>
       </CatSection>
 
       {/* New product */}
-      <CatSection title="New product" hint="Choose your shop category, then set name, prices, and stock. Images can be added later from admin tools if needed.">
+      <CatSection title="Add New Product">
         <View style={[cardWrap, { padding: 16 }]}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <Text style={{ color: CAT.ink, fontWeight: "800", fontSize: 16, fontFamily: FONT_DISPLAY }}>Details</Text>
+            <Text style={{ color: CAT.ink, fontWeight: "800", fontSize: 16, fontFamily: FONT_DISPLAY }}>Product Info</Text>
             <MaterialCommunityIcons name="information-outline" size={22} color={CAT.muted} />
           </View>
-          <Text style={labelStyle}>Shop vertical (fixed)</Text>
+          <Text style={labelStyle}>Master Category</Text>
           <View style={{ backgroundColor: CAT.inputBg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, borderWidth: 1, borderColor: CAT.border, marginBottom: 14 }}>
             <Text style={{ color: CAT.ink, fontWeight: "700", fontSize: 14, fontFamily: FONT_BODY }}>{verticalTitle(selectedStore.shopVertical)}</Text>
           </View>
-          <Text style={labelStyle}>Shelf category — where this SKU lives in your store</Text>
+          <Text style={labelStyle}>Subcategory</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
             <View style={{ flexDirection: "row", gap: 8, paddingVertical: 2 }}>
               {categories.map((c) => (
@@ -633,11 +633,11 @@ export function StoreOwnerCatalog({
               ))}
             </View>
           </ScrollView>
-          <Text style={labelStyle}>Product name</Text>
+          <Text style={labelStyle}>Product Name</Text>
           <TextInput
             value={newProduct.name}
             onChangeText={(v) => setNewProduct((p) => ({ ...p, name: v }))}
-            placeholder="e.g. Basmati rice 1 kg"
+            placeholder="Brand & Variant Name"
             placeholderTextColor={CAT.muted}
             style={{
               backgroundColor: CAT.inputBg,
@@ -654,7 +654,7 @@ export function StoreOwnerCatalog({
           />
           <View style={{ flexDirection: "row", gap: 10, marginBottom: 14 }}>
             <View style={{ flex: 1 }}>
-              <Text style={labelStyle}>Unit label</Text>
+              <Text style={labelStyle}>Unit</Text>
               <TextInput
                 value={newProduct.unit}
                 onChangeText={(v) => setNewProduct((p) => ({ ...p, unit: v }))}
@@ -674,7 +674,7 @@ export function StoreOwnerCatalog({
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={labelStyle}>MRP ₹</Text>
+              <Text style={labelStyle}>MRP</Text>
               <TextInput
                 value={newProduct.mrp}
                 onChangeText={(v) => setNewProduct((p) => ({ ...p, mrp: v }))}
@@ -695,7 +695,7 @@ export function StoreOwnerCatalog({
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={labelStyle}>Sell ₹</Text>
+              <Text style={labelStyle}>Price</Text>
               <TextInput
                 value={newProduct.price}
                 onChangeText={(v) => setNewProduct((p) => ({ ...p, price: v }))}
@@ -716,7 +716,7 @@ export function StoreOwnerCatalog({
               />
             </View>
           </View>
-          <Text style={labelStyle}>Opening stock</Text>
+          <Text style={labelStyle}>Current Stock</Text>
           <View style={{ flexDirection: "row", gap: 10, alignItems: "center", marginBottom: 16 }}>
             <TextInput
               value={newProduct.stock}
@@ -754,14 +754,14 @@ export function StoreOwnerCatalog({
       </CatSection>
 
       {/* Catalog list */}
-      <CatSection title="Your catalog" hint="Search, filter by category, or switch to hidden-only to review inactive SKUs.">
+      <CatSection title="Catalog">
         <View style={[cardWrap, { padding: 14, marginBottom: 10 }]}>
           <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: CAT.inputBg, borderRadius: 14, borderWidth: 1, borderColor: CAT.border, paddingHorizontal: 12 }}>
             <MaterialCommunityIcons name="magnify" size={22} color={CAT.muted} />
             <TextInput
               value={search}
               onChangeText={setSearch}
-              placeholder="Search by product or category"
+              placeholder="Search products, brands..."
               placeholderTextColor={CAT.muted}
               style={{ flex: 1, paddingVertical: 13, paddingHorizontal: 8, fontWeight: "600", color: CAT.ink, fontFamily: FONT_BODY }}
             />
@@ -781,7 +781,7 @@ export function StoreOwnerCatalog({
                   backgroundColor: filterCatId === "all" ? CAT.btnSolid : CAT.card,
                 }}
               >
-                <Text style={{ color: filterCatId === "all" ? "#fff" : CAT.ink, fontWeight: "800", fontSize: 12.5, fontFamily: FONT_DISPLAY }}>All</Text>
+                <Text style={{ color: filterCatId === "all" ? "#fff" : CAT.ink, fontWeight: "800", fontSize: 12.5, fontFamily: FONT_DISPLAY }}>All items</Text>
               </Pressable>
               {categories.slice(0, 8).map((c) => (
                 <Pressable
@@ -805,10 +805,10 @@ export function StoreOwnerCatalog({
           </ScrollView>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingVertical: 6 }}>
             <Text style={{ color: CAT.muted, fontWeight: "600", fontSize: 12, fontFamily: FONT_BODY, flex: 1, paddingRight: 12 }}>
-              Hidden-only shows SKUs you turned off (not visible to buyers).
+              Toggle off to hide products from customers.
             </Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={{ color: CAT.label, fontWeight: "800", fontSize: 10, fontFamily: FONT_DISPLAY, letterSpacing: 0.5 }}>HIDDEN</Text>
+              <Text style={{ color: CAT.label, fontWeight: "800", fontSize: 10, fontFamily: FONT_DISPLAY, letterSpacing: 0.5 }}>INACTIVE</Text>
               <Switch value={inactiveOnly} onValueChange={setInactiveOnly} trackColor={{ false: "#d6d3d1", true: "#86efac" }} thumbColor="#fff" />
             </View>
           </View>
@@ -933,7 +933,7 @@ export function StoreOwnerCatalog({
           Page {pageSafe + 1}
           {filtered.length === 0
             ? " · 0 items"
-            : ` · ${pageSafe * PAGE_SIZE + 1}–${Math.min(filtered.length, (pageSafe + 1) * PAGE_SIZE)} of ${filtered.length}`}
+            : ` · Showing ${Math.min(PAGE_SIZE, Math.max(filtered.length - pageSafe * PAGE_SIZE, 0))} of ${filtered.length}`}
         </Text>
         <View style={{ flexDirection: "row", gap: 8 }}>
           <Pressable

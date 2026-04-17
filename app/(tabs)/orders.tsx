@@ -69,10 +69,12 @@ function productThumbUri(p: { imageUrl?: string | null; imageUrl2?: string | nul
   return resolveMediaUrl(p.imageUrl?.trim() || p.imageUrl2?.trim() || undefined);
 }
 
-/** Store line under product — only for food-vertical shops (matches `Store.shopVertical`). */
+/** Show store name only for food-category stores. */
 function showStoreName(store: { shopVertical?: string | null } | undefined): boolean {
-  const v = (store?.shopVertical ?? "").toLowerCase().trim();
-  return v === "food" || v.startsWith("food-");
+  const raw = (store?.shopVertical ?? "").toLowerCase().trim();
+  if (!raw) return false;
+  const v = raw.replace(/\s+/g, "-").replace(/_/g, "-");
+  return v === "food";
 }
 
 /** Unit-level % off from catalog MRP vs price you paid (per unit on the order line). */
@@ -190,10 +192,10 @@ export default function OrdersScreen() {
         keyExtractor={(o) => o.id}
         ListHeaderComponent={
           <View style={{ marginBottom: 14 }}>
-            <Text style={{ fontSize: 30, fontWeight: "900", color: "#111827", letterSpacing: -0.3 }}>
+            <Text style={{ fontSize: 25, fontWeight: "900", color: "#111827", letterSpacing: -0.2 }}>
               Your orders
             </Text>
-            <Text style={{ fontSize: 16, fontWeight: "700", color: theme.textMuted, marginTop: 3 }}>
+            <Text style={{ fontSize: 14, fontWeight: "700", color: theme.textMuted, marginTop: 3 }}>
               Track everything in one place
             </Text>
           </View>
@@ -296,7 +298,7 @@ export default function OrdersScreen() {
                   </View>
                   <View style={{ alignItems: "flex-end", paddingTop: 2 }}>
                     <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: "800" }}>Order total</Text>
-                    <Text style={{ color: "#ea580c", fontSize: 21, fontWeight: "900", marginTop: 2 }}>{money(item.totalAmount)}</Text>
+                    <Text style={{ color: "#1d4ed8", fontSize: 21, fontWeight: "900", marginTop: 2 }}>{money(item.totalAmount)}</Text>
                     <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: "700", marginTop: 2 }}>COD</Text>
                   </View>
                 </View>
@@ -489,7 +491,7 @@ export default function OrdersScreen() {
                   </View>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 2 }}>
                     <Text style={{ color: theme.text, fontWeight: "900", fontSize: 16 }}>Grand total</Text>
-                    <Text style={{ color: "#ea580c", fontWeight: "900", fontSize: 19 }}>{money(activeOrder.totalAmount)}</Text>
+                    <Text style={{ color: "#1d4ed8", fontWeight: "900", fontSize: 19 }}>{money(activeOrder.totalAmount)}</Text>
                   </View>
                 </View>
 

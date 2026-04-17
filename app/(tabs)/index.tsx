@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  Alert,
   View,
   Text,
   ScrollView,
@@ -14,6 +15,7 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { api, getApiBase, getToken } from "@/lib/api";
 import { theme } from "@/lib/theme";
 import { resolveMediaUrl } from "@/lib/assets";
@@ -47,9 +49,9 @@ const HERO_SLIDES = [
     eyebrow: "Speedza",
     title: "Grocery specials",
     subtitle: "Fresh pantry picks & fast delivery.",
-    bg: ["#facc15", "#eab308", "#a16207"] as const,
-    text: "#2f2200",
-    subText: "#4f3a00",
+    bg: ["#dbeafe", "#60a5fa", "#1d4ed8"] as const,
+    text: "#172554",
+    subText: "#1e3a8a",
     image:
       "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&h=500&fit=crop&q=80",
   },
@@ -142,7 +144,7 @@ function featuredTheme(mainKey: string) {
       border: "#e7c768",
       title: "#7c2d12",
       sub: "#92400e",
-      accent: "#f59e0b",
+      accent: "#2563eb",
     };
   }
   return {
@@ -165,6 +167,7 @@ export default function ShopHomeScreen() {
   const [loading, setLoading] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
   const [err, setErr] = useState<string | null>(null);
+  const [sendingList, setSendingList] = useState(false);
 
   const resolveCoords = useCallback(async () => {
     const token = await getToken();
@@ -234,6 +237,73 @@ export default function ShopHomeScreen() {
     router.push(href);
   }
 
+  async function uploadListFromHome() {
+    const token = await getToken();
+    if (!token) {
+      Alert.alert("Sign in required", "Please login first, then upload your grocery list photo.");
+      router.push("/login");
+      return;
+    }
+
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert("Permission needed", "Allow gallery access to upload list photo.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.85,
+    });
+    if (result.canceled || !result.assets?.[0]?.uri) return;
+
+    setSendingList(true);
+    try {
+      const imageUri = result.assets[0].uri;
+      const ext = imageUri.split(".").pop()?.toLowerCase() || "jpg";
+      const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+      const fd = new FormData();
+      fd.append("file", { uri: imageUri, name: `list.${ext}`, type: mime } as any);
+
+      const up = await fetch(`${getApiBase()}/api/list-requests/upload-image`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd as any,
+      });
+      const upJson = (await up.json().catch(() => null)) as { imageUrl?: string; error?: string } | null;
+      if (!up.ok || !upJson?.imageUrl) {
+        Alert.alert("Upload failed", upJson?.error || "Could not upload list image");
+        return;
+      }
+
+      const addr = await api<{ address: { address: string } | null }>("/api/user/address");
+      const createRes = await api("/api/list-requests", {
+        method: "POST",
+        body: JSON.stringify({
+          imageUrl: upJson.imageUrl,
+          note: "",
+          address: addr.ok && addr.data?.address?.address ? addr.data.address.address : "",
+        }),
+      });
+      if (!createRes.ok) {
+        Alert.alert("Request failed", createRes.error || "Could not create request");
+        return;
+      }
+
+      Alert.alert(
+        "List sent",
+        "Admin received your grocery list photo. You can track status in Account.",
+        [
+          { text: "OK" },
+          { text: "Open Account", onPress: () => router.push("/account") },
+        ],
+      );
+    } finally {
+      setSendingList(false);
+    }
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: theme.homeCanvasBg }}>
       <ScrollView
@@ -255,7 +325,8 @@ export default function ShopHomeScreen() {
           onCategoryPress={(key) => openCategory(key)}
         />
 
-        <View style={{ paddingHorizontal: 16, marginBottom: 14 }}>
+        {false ? (
+          <View style={{ paddingHorizontal: 16, marginBottom: 14 }}>
           <View
             style={{
               flexDirection: "row",
@@ -274,32 +345,11 @@ export default function ShopHomeScreen() {
             >
               Today&apos;s event
             </Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <Pressable
-                onPress={() => router.push("/account")}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 6,
-                  borderRadius: 999,
-                  backgroundColor: "#7f1d1d",
-                  borderWidth: 1,
-                  borderColor: "#fecaca",
-                  paddingHorizontal: 10,
-                  paddingVertical: 6,
-                }}
-              >
-                <MaterialCommunityIcons name="file-image-plus-outline" size={16} color="#fff" />
-                <Text style={{ color: "#fff", fontWeight: "900", fontSize: 10.5, letterSpacing: 0.2 }}>
-                  Upload list
-                </Text>
-              </Pressable>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: "#22c55e" }} />
-                <Text style={{ fontSize: 10, fontWeight: "700", color: theme.textMuted, letterSpacing: 0.2 }}>
-                  Live
-                </Text>
-              </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: "#22c55e" }} />
+              <Text style={{ fontSize: 10, fontWeight: "700", color: theme.textMuted, letterSpacing: 0.2 }}>
+                Live
+              </Text>
             </View>
           </View>
           <View
@@ -326,54 +376,96 @@ export default function ShopHomeScreen() {
               </View>
             )}
           </View>
+          {/* Temporarily hidden upload card. Keep this block for quick re-enable later.
           <Pressable
-            onPress={() => router.push("/account")}
+            onPress={() => void uploadListFromHome()}
             style={{
               marginTop: 12,
-              borderRadius: 14,
+              borderRadius: 18,
               borderWidth: 1,
-              borderColor: "#fecaca",
+              borderColor: "#fca5a5",
               backgroundColor: "#7f1d1d",
-              paddingHorizontal: 14,
-              paddingVertical: 12,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 10,
+              paddingHorizontal: 15,
+              paddingVertical: 14,
+              gap: 12,
               ...bannerCardShadow,
             }}
           >
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                backgroundColor: "rgba(255,255,255,0.15)",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <MaterialCommunityIcons name="file-image-plus-outline" size={22} color="#fff" />
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                <View
+                  style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: 14,
+                    backgroundColor: "rgba(255,255,255,0.14)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.18)",
+                  }}
+                >
+                  <MaterialCommunityIcons name="file-image-plus-outline" size={24} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: "#fff", fontWeight: "900", fontSize: 15, letterSpacing: -0.2 }}>
+                    Upload Your Grocery List
+                  </Text>
+                  <Text style={{ color: "rgba(255,255,255,0.86)", fontWeight: "700", fontSize: 11.5, marginTop: 3, lineHeight: 16 }}>
+                    Send your written list photo and get your order delivered fast.
+                  </Text>
+                </View>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={22} color="#fff" />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: "#fff", fontWeight: "900", fontSize: 14 }}>
-                Upload list photo & order
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.12)", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 }}>
+                <MaterialCommunityIcons name="camera-outline" size={14} color="#fff" />
+                <Text style={{ color: "#fff", fontWeight: "800", fontSize: 10.5 }}>Photo upload</Text>
+              </View>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.12)", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 }}>
+                <MaterialCommunityIcons name="truck-fast-outline" size={14} color="#fff" />
+                <Text style={{ color: "#fff", fontWeight: "800", fontSize: 10.5 }}>Home delivery</Text>
+              </View>
+            </View>
+            <View style={{ marginTop: 10, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.22)", backgroundColor: "rgba(255,255,255,0.08)", paddingHorizontal: 10, paddingVertical: 9 }}>
+              <Text style={{ color: "#fff", fontWeight: "900", fontSize: 11, letterSpacing: 0.3 }}>
+                How it works
               </Text>
-              <Text style={{ color: "rgba(255,255,255,0.88)", fontWeight: "700", fontSize: 11, marginTop: 2 }}>
-                Kirana list ki photo bhejo, admin confirm karke delivery karega.
+              <Text style={{ marginTop: 4, color: "rgba(255,255,255,0.9)", fontWeight: "700", fontSize: 10.5, lineHeight: 15 }}>
+                1) Upload photo  •  2) Admin reviews list  •  3) Groceries delivered to your home
               </Text>
             </View>
-            <MaterialCommunityIcons name="chevron-right" size={22} color="#fff" />
+            <View style={{ marginTop: 12, borderRadius: 14, overflow: "hidden" }}>
+              <LinearGradient
+                colors={sendingList ? ["#9ca3af", "#6b7280"] : ["#ffffff", "#ffe4e6"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{ paddingVertical: 12, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}
+              >
+                {sendingList ? (
+                  <ActivityIndicator size="small" color="#111827" />
+                ) : (
+                  <MaterialCommunityIcons name="cloud-upload-outline" size={18} color="#7f1d1d" />
+                )}
+                <Text style={{ color: sendingList ? "#111827" : "#7f1d1d", fontWeight: "900", fontSize: 13 }}>
+                  {sendingList ? "Uploading..." : "Upload now"}
+                </Text>
+              </LinearGradient>
+            </View>
           </Pressable>
-        </View>
+          */}
+          </View>
+        ) : null}
 
-        <View style={{ marginHorizontal: 16, marginBottom: 14, borderRadius: 16, ...bannerCardShadow }}>
-          <View style={{ borderRadius: 16, overflow: "hidden", backgroundColor: slide.bg[1] }}>
+        <View style={{ marginTop: 12, marginHorizontal: 16, marginBottom: 14, borderRadius: 20, ...bannerCardShadow }}>
+          <View style={{ borderRadius: 20, overflow: "hidden", backgroundColor: slide.bg[1] }}>
             <LinearGradient
               colors={[slide.bg[0], slide.bg[1], slide.bg[2]]}
               locations={[0, 0.52, 1]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={{ paddingTop: 12, paddingBottom: 10, paddingHorizontal: 14 }}
+              style={{ paddingTop: 14, paddingBottom: 12, paddingHorizontal: 14 }}
             >
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <View style={{ flex: 1, paddingRight: 10, minWidth: 0 }}>
@@ -483,12 +575,12 @@ export default function ShopHomeScreen() {
           </View>
         </View>
 
-        <View style={{ marginTop: 4, marginBottom: 8 }}>
+        <View style={{ marginTop: 6, marginBottom: 8 }}>
           <Text
             style={{
               fontSize: 17,
               fontWeight: "900",
-              color: theme.brandRust,
+              color: theme.text,
               marginBottom: 14,
               letterSpacing: -0.2,
               paddingHorizontal: SECTION_PAD,

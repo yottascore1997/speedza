@@ -10,8 +10,8 @@ import { getShopHeaderColors } from "@/lib/shopHeaderTheme";
 
 const SHOP_KEY = "__shop__";
 
-const SEARCH_BORDER = "rgba(15, 23, 42, 0.08)";
-const SEARCH_ICON = "#57534e";
+const SEARCH_BORDER = "rgba(15, 23, 42, 0.12)";
+const SEARCH_ICON = "#334155";
 
 const headerLift = Platform.select({
   ios: {
@@ -184,7 +184,7 @@ export function ShopMarketHeader({
           width: 120,
           height: 120,
           borderRadius: 60,
-          backgroundColor: "rgba(255,255,255,0.35)",
+          backgroundColor: "rgba(255,255,255,0.14)",
         }}
       />
       <View
@@ -196,11 +196,11 @@ export function ShopMarketHeader({
           width: 100,
           height: 100,
           borderRadius: 50,
-          backgroundColor: "rgba(255,255,255,0.2)",
+          backgroundColor: "rgba(255,255,255,0.1)",
         }}
       />
 
-      <View style={{ paddingTop: safeTop, paddingHorizontal: 16, paddingBottom: 12 }}>
+      <View style={{ paddingTop: safeTop, paddingHorizontal: 16, paddingBottom: 10 }}>
         <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
           <Pressable
             onPress={() => router.push("/profile")}
@@ -328,11 +328,11 @@ export function ShopMarketHeader({
         </View>
       </View>
 
-      <View style={{ paddingTop: 4, paddingBottom: 10 }}>
+      <View style={{ paddingTop: 6, paddingBottom: 10 }}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 14, gap: 6, alignItems: "flex-end", paddingBottom: 2 }}
+          contentContainerStyle={{ paddingHorizontal: 12, gap: 8, alignItems: "flex-end", paddingBottom: 2 }}
         >
           {categories.map((c) => {
             const isHome = c.key === SHOP_KEY;
@@ -343,13 +343,13 @@ export function ShopMarketHeader({
               <Pressable
                 key={c.id}
                 onPress={() => (isHome ? onShopPress() : onCategoryPress(c.key))}
-                style={{ width: 68, alignItems: "center", paddingBottom: 2 }}
+                style={{ width: 72, alignItems: "center", paddingBottom: 2 }}
               >
                 <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: 4, width: "100%" }}>
                   <MaterialCommunityIcons
                     name={isHome ? (active ? "home" : "home-outline") : stripIcon!}
                     size={24}
-                    color={active ? "#0c0a09" : inactiveColor}
+                    color={active ? "#0f172a" : inactiveColor}
                   />
                   <Text
                     numberOfLines={1}
@@ -359,7 +359,7 @@ export function ShopMarketHeader({
                       textAlign: "center",
                       fontSize: 10,
                       fontWeight: active ? "900" : "800",
-                      color: active ? "#0c0a09" : inactiveColor,
+                      color: active ? "#0f172a" : inactiveColor,
                       lineHeight: 12,
                       width: "100%",
                     }}
@@ -373,7 +373,7 @@ export function ShopMarketHeader({
                     width: active ? 28 : 0,
                     height: 3,
                     borderRadius: 2,
-                    backgroundColor: active ? "#0c0a09" : "transparent",
+                    backgroundColor: active ? "#0f172a" : "transparent",
                   }}
                 />
               </Pressable>
@@ -396,11 +396,11 @@ export function ShopMarketHeader({
           style={{
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: "rgba(255, 255, 255, 0.92)",
-            borderRadius: 999,
+            backgroundColor: "#ffffff",
+            borderRadius: 16,
             paddingLeft: 16,
             paddingRight: 6,
-            minHeight: 50,
+            minHeight: 52,
             borderWidth: 1,
             borderColor: SEARCH_BORDER,
             ...headerLift,
@@ -411,7 +411,7 @@ export function ShopMarketHeader({
             value={search}
             onChangeText={setSearch}
             placeholder="Search milk, snacks, stores..."
-            placeholderTextColor="#a8a29e"
+            placeholderTextColor="#94a3b8"
             returnKeyType="search"
             onSubmitEditing={() => goSearch()}
             style={{
@@ -430,7 +430,7 @@ export function ShopMarketHeader({
               backgroundColor: colors.goBtn,
               paddingHorizontal: 18,
               paddingVertical: 12,
-              borderRadius: 999,
+              borderRadius: 12,
               marginVertical: 4,
             }}
           >

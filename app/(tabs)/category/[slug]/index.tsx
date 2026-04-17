@@ -84,6 +84,8 @@ export default function CategoryHubScreen() {
   const catalogKey = data?.mainCategory?.key ?? s;
   const categories = data?.categories ?? [];
   const showFoodGridAds = isFoodMainCategory(s, title);
+  const foodCanvas = "#fbf3df";
+  const pageBg = showFoodGridAds ? foodCanvas : theme.bg;
 
   function openSub(sub: CatalogCategory) {
     const href =
@@ -103,7 +105,7 @@ export default function CategoryHubScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.bg }}>
+    <View style={{ flex: 1, backgroundColor: pageBg }}>
       <ShopMarketHeader
         safeTop={insets.top}
         mains={mains}
@@ -134,7 +136,12 @@ export default function CategoryHubScreen() {
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 24 + insets.bottom, paddingHorizontal: pad, paddingTop: 4 }}
+          contentContainerStyle={{
+            paddingBottom: 24 + insets.bottom,
+            paddingHorizontal: pad,
+            paddingTop: showFoodGridAds ? 8 : 4,
+            backgroundColor: pageBg,
+          }}
           refreshControl={
             <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={theme.primary} />
           }
@@ -146,7 +153,9 @@ export default function CategoryHubScreen() {
             onOrderNow={orderNowFromBanner}
           />
 
-          <Text style={{ fontSize: 18, fontWeight: "900", color: "#0c0a09", marginBottom: 12 }}>{title}</Text>
+          <Text style={{ fontSize: 18, fontWeight: "900", color: "#0c0a09", marginBottom: 12 }}>
+            {showFoodGridAds ? "Explore by category 💜" : title}
+          </Text>
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
             {categories.flatMap((c, index) => {
@@ -161,11 +170,16 @@ export default function CategoryHubScreen() {
                     style={{
                       width: "100%",
                       aspectRatio: 1,
-                      borderRadius: 16,
+                      borderRadius: showFoodGridAds ? 18 : 16,
                       overflow: "hidden",
-                      backgroundColor: "#f5f5f4",
+                      backgroundColor: showFoodGridAds ? "#fffef8" : "#f5f5f4",
                       borderWidth: 1,
-                      borderColor: "#e7e5e4",
+                      borderColor: showFoodGridAds ? "#f4df9c" : "#e7e5e4",
+                      shadowColor: showFoodGridAds ? "#78350f" : "#000",
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: showFoodGridAds ? 0.08 : 0.04,
+                      shadowRadius: 8,
+                      elevation: showFoodGridAds ? 3 : 1,
                     }}
                   >
                     {img ? (

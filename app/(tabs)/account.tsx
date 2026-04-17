@@ -518,7 +518,7 @@ export default function AccountScreen() {
                   ) : null}
                   <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 8, flexDirection: "row", justifyContent: "space-between" }}>
                     <Text style={{ fontSize: 12, color: theme.textMuted, fontWeight: "700" }}>Total (COD)</Text>
-                    <Text style={{ fontSize: 17, color: "#ea580c", fontWeight: "900" }}>₹{o.totalAmount}</Text>
+                    <Text style={{ fontSize: 17, color: "#1d4ed8", fontWeight: "900" }}>₹{o.totalAmount}</Text>
                   </View>
                 </View>
               </View>

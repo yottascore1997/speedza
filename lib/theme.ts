@@ -1,13 +1,13 @@
-/** Speedza — bottom-nav chrome warm orange; in-screen CTAs stay brand green. */
+/** Speedza — premium blue highlights + green CTAs. */
 export const theme = {
   /** Tab bar active icon + native headers (Search, Profile, …) */
-  brandNavOrange: "#ea580c",
+  brandNavOrange: "#2563eb",
   /** Cart Place order + home “Shop” CTA — forest → emerald */
   placeOrderGradient: ["#022c22", "#004d3d", "#059669"] as const,
   /** Full-bleed surfaces (home, etc.) — warm off-white, not stark #fff */
   bg: "#f4f8f6",
-  /** Shop home scroll background — soft warm orange (matches home header) */
-  homeCanvasBg: "#fff4e6",
+  /** Shop home scroll background — warm food-like canvas */
+  homeCanvasBg: "#f4e7cf",
   /** Sponsored ad strip above stores (forest → emerald) */
   adBannerGradient: ["#022c22", "#004d3d", "#059669"] as const,
   /** Page canvas — soft peach */
