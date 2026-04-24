@@ -43,6 +43,76 @@ type MainCategory = {
   subcategories: { id: string; name: string; imageUrl?: string | null }[];
 };
 
+type ProductHit = {
+  id: string;
+  name: string;
+  price: unknown;
+  mrp?: unknown;
+  discountPercent?: number | null;
+  imageUrl?: string | null;
+  unitLabel?: string | null;
+  stock?: number;
+  store?: { id: string; name: string };
+};
+
+/** Demo row — “Deals starting at ₹9” carousel (replace with API when ready) */
+const DEALS_CAROUSEL_DUMMY: ProductHit[] = [
+  {
+    id: "deal-dummy-1",
+    name: "Pampers Premium Care Small",
+    price: 19,
+    mrp: 74,
+    imageUrl: "https://images.unsplash.com/photo-1584515933487-779824d29309?w=400&h=400&fit=crop&q=80",
+    unitLabel: "1 pack (4 pcs)",
+    stock: 99,
+  },
+  {
+    id: "deal-dummy-2",
+    name: "Zoff Gravy Mix Masala",
+    price: 15,
+    mrp: 45,
+    imageUrl: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=400&h=400&fit=crop&q=80",
+    unitLabel: "50 g",
+    stock: 99,
+  },
+  {
+    id: "deal-dummy-3",
+    name: "Amul Gold Full Cream Milk",
+    price: 28,
+    mrp: 32,
+    imageUrl: "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400&h=400&fit=crop&q=80",
+    unitLabel: "500 ml",
+    stock: 99,
+  },
+  {
+    id: "deal-dummy-4",
+    name: "Lay's Classic Salted Chips",
+    price: 12,
+    mrp: 20,
+    imageUrl: "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=400&h=400&fit=crop&q=80",
+    unitLabel: "52 g",
+    stock: 99,
+  },
+  {
+    id: "deal-dummy-5",
+    name: "Nescafe Classic Coffee",
+    price: 22,
+    mrp: 40,
+    imageUrl: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400&h=400&fit=crop&q=80",
+    unitLabel: "50 g",
+    stock: 99,
+  },
+  {
+    id: "deal-dummy-6",
+    name: "Dettol Antiseptic Liquid",
+    price: 9,
+    mrp: 18,
+    imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=400&fit=crop&q=80",
+    unitLabel: "125 ml",
+    stock: 99,
+  },
+];
+
 const HERO_SLIDES = [
   {
     id: "grocery",
@@ -95,6 +165,24 @@ function previewMainCategoryImage(m: MainCategory): string | undefined {
 const SUB_CARD_W = 104;
 const SECTION_PAD = 16;
 
+/** 4 coupon tiles in one row — no horizontal scroll */
+const COUPON_ROW_GAP = 6;
+const couponTileW = (SCREEN_W - SECTION_PAD * 2 - COUPON_ROW_GAP * 3) / 4;
+
+/** Premium soft diagonal fills (per tile) */
+const COUPON_GRADIENTS = [
+  ["#eff6ff", "#bfdbfe"] as const,
+  ["#ecfdf5", "#a7f3d0"] as const,
+  ["#fdf2f8", "#fbcfe8"] as const,
+  ["#f8fafc", "#cbd5e1"] as const,
+];
+const COUPON_BORDER = [
+  "rgba(59,130,246,0.38)",
+  "rgba(16,185,129,0.4)",
+  "rgba(236,72,153,0.36)",
+  "rgba(100,116,139,0.42)",
+];
+
 const subCardShadow = Platform.select({
   ios: {
     shadowColor: "#000",
@@ -118,6 +206,18 @@ const bannerCardShadow = Platform.select({
   default: {},
 });
 
+/** Deals carousel product cards — light lift (compact UI) */
+const dealsCardShadow = Platform.select({
+  ios: {
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+  },
+  android: { elevation: 2 },
+  default: {},
+});
+
 function heroCategoryKey(slideId: string): string {
   if (slideId === "daily") return "daily-essentials";
   return slideId;
@@ -125,6 +225,15 @@ function heroCategoryKey(slideId: string): string {
 
 function normMainKey(v: string) {
   return v.trim().toLowerCase().replace(/\s+/g, "-");
+}
+
+function numPrice(p: unknown): number {
+  if (typeof p === "number" && Number.isFinite(p)) return p;
+  if (typeof p === "string") {
+    const n = parseFloat(p);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return Number(p) || 0;
 }
 
 function featuredTheme(mainKey: string) {
@@ -168,6 +277,9 @@ export default function ShopHomeScreen() {
   const [heroIndex, setHeroIndex] = useState(0);
   const [err, setErr] = useState<string | null>(null);
   const [sendingList, setSendingList] = useState(false);
+  const [offerProducts, setOfferProducts] = useState<ProductHit[]>([]);
+  const [dealsNine, setDealsNine] = useState<ProductHit[]>([]);
+  const [bestSelling, setBestSelling] = useState<ProductHit[]>([]);
 
   const resolveCoords = useCallback(async () => {
     const token = await getToken();
@@ -190,12 +302,14 @@ export default function ShopHomeScreen() {
       setLat(la);
       setLng(ln);
 
-      const [nearby, tree, banner] = await Promise.all([
+      const [nearby, tree, banner, productsA, productsE] = await Promise.all([
         api<{ stores: StoreItem[] }>(
           `/api/stores/nearby?lat=${la}&lng=${ln}&radiusKm=60&limit=30`,
         ),
         api<{ mains: MainCategory[] }>("/api/master/shop-tree"),
         api<{ imageUrl: string | null }>("/api/shop/todays-match-banner"),
+        api<{ products: ProductHit[] }>(`/api/shop/search?q=${encodeURIComponent("a")}&limit=50`),
+        api<{ products: ProductHit[] }>(`/api/shop/search?q=${encodeURIComponent("e")}&limit=50`),
       ]);
 
       if (nearby.ok && nearby.data) setStores(nearby.data.stores);
@@ -207,6 +321,35 @@ export default function ShopHomeScreen() {
       } else {
         setBannerUrl(`${getApiBase()}/banners/todays-match.svg`);
       }
+
+      const mergedProducts = [...(productsA.data?.products ?? []), ...(productsE.data?.products ?? [])]
+        .filter((p) => (typeof p.stock === "number" ? p.stock > 0 : true))
+        .filter((p, i, arr) => arr.findIndex((x) => x.id === p.id) === i);
+
+      const offers = mergedProducts
+        .filter((p) => numPrice(p.mrp) > 0 && numPrice(p.price) > 0 && numPrice(p.price) < numPrice(p.mrp))
+        .sort((a, b) => numPrice(b.mrp) - numPrice(b.price) - (numPrice(a.mrp) - numPrice(a.price)))
+        .slice(0, 8);
+      setOfferProducts(offers);
+
+      const dealRange = mergedProducts
+        .filter((p) => {
+          const price = numPrice(p.price);
+          return price >= 9 && price <= 30;
+        })
+        .sort((a, b) => numPrice(a.price) - numPrice(b.price))
+        .slice(0, 12);
+      setDealsNine(dealRange);
+
+      const best = mergedProducts
+        .sort((a, b) => {
+          const da = typeof a.discountPercent === "number" ? a.discountPercent : 0;
+          const db = typeof b.discountPercent === "number" ? b.discountPercent : 0;
+          if (db !== da) return db - da;
+          return numPrice(a.price) - numPrice(b.price);
+        })
+        .slice(0, 12);
+      setBestSelling(best);
     } finally {
       setLoading(false);
     }
@@ -458,44 +601,6 @@ export default function ShopHomeScreen() {
           </View>
         ) : null}
 
-        <View
-          style={{
-            marginTop: 8,
-            marginHorizontal: 16,
-            marginBottom: 12,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: "#ddd6fe",
-            backgroundColor: "#f5f3ff",
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-            ...bannerCardShadow,
-          }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-            <View style={{ flex: 1, borderRadius: 12, backgroundColor: "#ede9fe", paddingVertical: 10, paddingHorizontal: 10, borderWidth: 1, borderColor: "#ddd6fe" }}>
-              <Text style={{ color: "#6d28d9", fontWeight: "900", fontSize: 20 }}>₹0 FEES</Text>
-            </View>
-            <View style={{ flex: 1, borderRadius: 12, backgroundColor: "#ede9fe", paddingVertical: 10, paddingHorizontal: 10, borderWidth: 1, borderColor: "#ddd6fe" }}>
-              <Text style={{ color: "#6d28d9", fontWeight: "900", fontSize: 15 }}>EVERYDAY LOWEST PRICES*</Text>
-            </View>
-          </View>
-          <View style={{ marginTop: 9, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <MaterialCommunityIcons name="check-circle" size={12} color="#16a34a" />
-              <Text style={{ color: "#4c1d95", fontSize: 10.5, fontWeight: "800" }}>₹0 Handling Fee</Text>
-            </View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <MaterialCommunityIcons name="check-circle" size={12} color="#16a34a" />
-              <Text style={{ color: "#4c1d95", fontSize: 10.5, fontWeight: "800" }}>₹0 Delivery Fee*</Text>
-            </View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <MaterialCommunityIcons name="check-circle" size={12} color="#16a34a" />
-              <Text style={{ color: "#4c1d95", fontSize: 10.5, fontWeight: "800" }}>₹0 Rain & Surge Fee</Text>
-            </View>
-          </View>
-        </View>
-
         <View style={{ marginTop: 12, marginHorizontal: 16, marginBottom: 14, borderRadius: 20, ...bannerCardShadow }}>
           <View style={{ borderRadius: 20, overflow: "hidden", backgroundColor: slide.bg[1] }}>
             <LinearGradient
@@ -614,6 +719,402 @@ export default function ShopHomeScreen() {
         </View>
 
         <View style={{ marginTop: 6, marginBottom: 8 }}>
+          <View style={{ paddingHorizontal: SECTION_PAD, marginBottom: 18 }}>
+            <Text style={{ fontSize: 15, fontWeight: "900", color: theme.text, marginBottom: 8, letterSpacing: -0.3 }}>
+              Coupons & Offers
+            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                gap: COUPON_ROW_GAP,
+                paddingTop: 0,
+                paddingBottom: 2,
+                alignItems: "stretch",
+              }}
+            >
+              {[50, 100, 150, 200].map((off, idx) => {
+                const g = COUPON_GRADIENTS[idx % 4];
+                const borderC = COUPON_BORDER[idx % 4];
+                const accent = ["#1e3a8a", "#14532d", "#831843", "#334155"][idx % 4];
+                const accentMuted = ["#1d4ed8", "#166534", "#9d174d", "#475569"][idx % 4];
+                return (
+                <LinearGradient
+                  key={`coupon-${off}`}
+                  colors={[...g]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    width: couponTileW,
+                    borderRadius: 11,
+                    borderWidth: 1,
+                    borderColor: borderC,
+                    paddingVertical: 7,
+                    paddingHorizontal: 4,
+                    alignItems: "center",
+                    overflow: "hidden",
+                    ...subCardShadow,
+                  }}
+                >
+                  <Image
+                    source={require("../../assets/discount.png")}
+                    style={{ width: 22, height: 22, marginBottom: 3 }}
+                    contentFit="contain"
+                  />
+                  <Text
+                    style={{
+                      color: accent,
+                      fontSize: 7.5,
+                      fontWeight: "900",
+                      letterSpacing: 0.2,
+                      lineHeight: 10,
+                    }}
+                  >
+                    FLAT
+                  </Text>
+                  <Text
+                    style={{
+                      color: accentMuted,
+                      fontSize: couponTileW < 72 ? 11 : 12,
+                      lineHeight: couponTileW < 72 ? 14 : 15,
+                      fontWeight: "900",
+                      marginTop: 2,
+                      textAlign: "center",
+                    }}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.75}
+                  >
+                    ₹{off}
+                    <Text style={{ color: accent, fontSize: couponTileW < 72 ? 8 : 9, fontWeight: "900" }}> OFF</Text>
+                  </Text>
+                  <View
+                    style={{
+                      marginTop: 4,
+                      borderRadius: 999,
+                      backgroundColor: "#0a0a0a",
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.12)",
+                      paddingHorizontal: 4,
+                      paddingVertical: 3,
+                      alignSelf: "stretch",
+                    }}
+                  >
+                    <Text
+                      style={{ color: "#ffffff", fontSize: 8, fontWeight: "800", lineHeight: 11, textAlign: "center" }}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.7}
+                    >
+                      above ₹{idx === 0 ? 59 : idx === 1 ? 119 : idx === 2 ? 179 : 239}
+                    </Text>
+                  </View>
+                </LinearGradient>
+                );
+              })}
+            </View>
+
+            <ScrollView
+              horizontal
+              style={{ marginTop: 8 }}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                gap: 6,
+                paddingTop: 0,
+                paddingBottom: 0,
+                alignItems: "center",
+              }}
+            >
+              {offerProducts.slice(0, 4).map((p, i) => {
+                const price = numPrice(p.price);
+                const mrp = numPrice(p.mrp);
+                const save = Math.max(0, Math.round(mrp - price));
+                return (
+                  <Pressable
+                    key={`offer-${p.id}`}
+                    onPress={() => router.push(`/product/${p.id}` as Href)}
+                    style={{
+                      width: 188,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: "#e2e8f0",
+                      backgroundColor: "#f8fafc",
+                      paddingVertical: 6,
+                      paddingHorizontal: 8,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                      ...subCardShadow,
+                    }}
+                  >
+                      <View
+                        style={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: 8,
+                          backgroundColor: "#eff6ff",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderWidth: 1,
+                          borderColor: "#dbeafe",
+                        }}
+                      >
+                        <MaterialCommunityIcons name={i % 2 === 0 ? "wallet-giftcard" : "credit-card-outline"} size={14} color="#1d4ed8" />
+                      </View>
+                      <View style={{ flex: 1, paddingVertical: 0 }}>
+                        <Text numberOfLines={2} style={{ color: "#0f172a", fontWeight: "900", fontSize: 10.5, lineHeight: 13 }}>
+                          Flat ₹{save} off on orders above ₹{Math.max(99, Math.round(price))}
+                        </Text>
+                        <Text numberOfLines={1} style={{ color: "#334155", fontWeight: "700", fontSize: 8.5, marginTop: 1, lineHeight: 11 }}>
+                          Use code: {i % 2 === 0 ? "TRYSPEEDZA" : "SPEEDZAFAST"}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+            </ScrollView>
+          </View>
+
+          <View style={{ paddingHorizontal: SECTION_PAD, marginBottom: 14, marginTop: 4, alignItems: "center" }}>
+            {/* Wider than section inset — extra bleed vs coupons row so heading uses more horizontal space */}
+            <View
+              style={{
+                width: SCREEN_W - SECTION_PAD * 2 + 44,
+                marginHorizontal: -22,
+                alignSelf: "center",
+                alignItems: "center",
+              }}
+            >
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.9}
+                style={{
+                  fontSize: 17,
+                  fontWeight: "800",
+                  color: "#1D6B32",
+                  letterSpacing: 0.12,
+                  lineHeight: 20,
+                  textAlign: "center",
+                  textTransform: "uppercase",
+                  width: "100%",
+                }}
+              >
+                Deals starting at ₹9
+              </Text>
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.9}
+                style={{
+                  marginTop: 3,
+                  fontSize: 11,
+                  color: "#545E6B",
+                  fontWeight: "400",
+                  textAlign: "center",
+                  lineHeight: 14,
+                  width: "100%",
+                }}
+              >
+                Add Any 5 Items
+              </Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{
+                marginTop: 10,
+                marginHorizontal: -SECTION_PAD,
+                paddingHorizontal: SECTION_PAD,
+                paddingVertical: 10,
+                backgroundColor: "#f0fdf4",
+                borderTopWidth: 1,
+                borderBottomWidth: 1,
+                borderColor: "#dcfce7",
+              }}
+              contentContainerStyle={{ gap: 8, alignItems: "stretch", paddingRight: 2 }}
+            >
+              <View
+                style={{
+                  width: 92,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: "#bbf7d0",
+                  backgroundColor: "#ecfdf5",
+                  paddingVertical: 10,
+                  paddingHorizontal: 8,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  minHeight: 168,
+                  ...bannerCardShadow,
+                }}
+              >
+                <Text
+                  numberOfLines={3}
+                  style={{
+                    color: "#0f172a",
+                    fontSize: 9,
+                    fontWeight: "900",
+                    letterSpacing: 0.45,
+                    textAlign: "center",
+                    lineHeight: 11,
+                  }}
+                >
+                  BEST OF ALL
+                </Text>
+                <View
+                  style={{
+                    marginTop: 8,
+                    backgroundColor: "#166534",
+                    paddingVertical: 7,
+                    paddingHorizontal: 12,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minWidth: 70,
+                    ...Platform.select({
+                      ios: {
+                        shadowColor: "#14532d",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.28,
+                        shadowRadius: 4,
+                      },
+                      android: { elevation: 3 },
+                      default: {},
+                    }),
+                  }}
+                >
+                  <Text style={{ color: "#ffffff", fontSize: 13, fontWeight: "900", letterSpacing: 0.45 }}>DEALS</Text>
+                </View>
+              </View>
+              {DEALS_CAROUSEL_DUMMY.map((p) => {
+                const img = resolveMediaUrl(p.imageUrl ?? undefined);
+                const price = numPrice(p.price);
+                const mrp = numPrice(p.mrp);
+                const offAmt = Math.max(0, Math.round(mrp - price));
+                return (
+                  <Pressable
+                    key={`deal-${p.id}`}
+                    onPress={() => {
+                      if (p.id.startsWith("deal-dummy-")) {
+                        Alert.alert("Demo product", "Yeh abhi sample product hai. Real deals jald hi catalog se aayenge.");
+                        return;
+                      }
+                      router.push(`/product/${p.id}` as Href);
+                    }}
+                    style={{
+                      width: 138,
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: "#eef2f6",
+                      backgroundColor: theme.bgElevated,
+                      overflow: "hidden",
+                      ...dealsCardShadow,
+                    }}
+                  >
+                    <View style={{ height: 96, backgroundColor: "#f8fafc", borderBottomWidth: 1, borderBottomColor: "#f1f5f9" }}>
+                      {img ? <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : null}
+                      <View style={{ position: "absolute", right: 6, bottom: 6 }}>
+                        <View
+                          style={{
+                            width: 32,
+                            height: 28,
+                            borderRadius: 10,
+                            backgroundColor: "#fff",
+                            borderWidth: 1,
+                            borderColor: "#fda4af",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            ...Platform.select({
+                              ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 },
+                              android: { elevation: 2 },
+                              default: {},
+                            }),
+                          }}
+                        >
+                          <MaterialCommunityIcons name="plus" size={18} color="#e11d48" />
+                        </View>
+                      </View>
+                    </View>
+                    <View style={{ paddingHorizontal: 8, paddingTop: 7, paddingBottom: 9 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "nowrap" }}>
+                        <View style={{ borderRadius: 8, backgroundColor: "#16a34a", paddingHorizontal: 7, paddingVertical: 3 }}>
+                          <Text style={{ color: "#fff", fontWeight: "900", fontSize: 14, letterSpacing: 0.15 }}>₹{Math.round(price)}</Text>
+                        </View>
+                        {mrp > price ? (
+                          <Text style={{ color: "#94a3b8", fontWeight: "700", fontSize: 11, textDecorationLine: "line-through" }}>₹{Math.round(mrp)}</Text>
+                        ) : null}
+                      </View>
+                      {offAmt > 0 ? (
+                        <>
+                          <Text style={{ color: "#15803d", fontWeight: "900", fontSize: 12, marginTop: 4 }}>₹{offAmt} OFF</Text>
+                          <View
+                            style={{
+                              marginTop: 5,
+                              borderTopWidth: 1,
+                              borderColor: "rgba(148,163,184,0.55)",
+                              borderStyle: "dashed",
+                              width: "100%",
+                            }}
+                          />
+                        </>
+                      ) : null}
+                      <Text numberOfLines={2} ellipsizeMode="tail" style={{ color: theme.text, fontWeight: "800", fontSize: 12, lineHeight: 15, marginTop: 6 }}>
+                        {p.name}
+                      </Text>
+                      {!!p.unitLabel && (
+                        <Text numberOfLines={1} style={{ color: theme.textMuted, fontWeight: "600", fontSize: 10, marginTop: 3 }}>
+                          {p.unitLabel}
+                        </Text>
+                      )}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          <View style={{ paddingHorizontal: SECTION_PAD, marginBottom: 16 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginTop: 0 }}>
+              {bestSelling.slice(0, 8).map((p) => {
+                const img = resolveMediaUrl(p.imageUrl ?? undefined);
+                const price = numPrice(p.price);
+                const mrp = numPrice(p.mrp);
+                return (
+                  <Pressable
+                    key={`best-${p.id}`}
+                    onPress={() => router.push(`/product/${p.id}` as Href)}
+                    style={{
+                      width: 150,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: "#e8eef5",
+                      backgroundColor: theme.bgElevated,
+                      overflow: "hidden",
+                      ...subCardShadow,
+                    }}
+                  >
+                    <View style={{ height: 96, backgroundColor: "#f8fafc", borderBottomWidth: 1, borderBottomColor: "#f1f5f9" }}>
+                      {img ? <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : null}
+                    </View>
+                    <View style={{ padding: 7 }}>
+                      <Text numberOfLines={2} style={{ fontSize: 12, fontWeight: "800", color: theme.text, minHeight: 30 }}>
+                        {p.name}
+                      </Text>
+                      <ProductPriceOfferRow
+                        compact
+                        layout="premiumGrid"
+                        sellingPrice={price}
+                        mrp={mrp}
+                        discountPercent={p.discountPercent}
+                        style={{ marginTop: 4 }}
+                      />
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+
           <Text
             style={{
               fontSize: 17,

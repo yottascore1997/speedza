@@ -22,6 +22,8 @@ type Props = {
   /** Smaller controls for image-corner overlay on product tiles */
   dense?: boolean;
   addLabel?: string;
+  addBgColor?: string;
+  addBorderColor?: string;
 };
 
 export function CartQtyStepper({
@@ -31,6 +33,8 @@ export function CartQtyStepper({
   compact = false,
   dense = false,
   addLabel = "Add to cart",
+  addBgColor = ADD_GREEN,
+  addBorderColor = "#14532d",
 }: Props) {
   const [qty, setQty] = useState(0);
   const inflight = useRef(false);
@@ -140,14 +144,14 @@ export function CartQtyStepper({
         ) : (
           <View
             style={{
-              backgroundColor: ADD_GREEN,
+              backgroundColor: addBgColor,
               paddingVertical: addPadV,
               paddingHorizontal: addPadH,
               alignItems: "center",
               justifyContent: "center",
               minHeight: addMinH,
               borderWidth: 1,
-              borderColor: "#14532d",
+              borderColor: addBorderColor,
             }}
           >
             <Text

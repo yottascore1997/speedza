@@ -16,17 +16,10 @@ import * as ImagePicker from "expo-image-picker";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { api, getApiBase, getToken } from "@/lib/api";
 import { resolveMediaUrl } from "@/lib/assets";
+import { appFonts } from "@/lib/typography";
 
-const FONT_DISPLAY = Platform.select({
-  ios: "SF Pro Display",
-  android: "sans-serif-medium",
-  default: "System",
-});
-const FONT_BODY = Platform.select({
-  ios: "SF Pro Text",
-  android: "sans-serif",
-  default: "System",
-});
+const FONT_DISPLAY = appFonts.bold;
+const FONT_BODY = appFonts.regular;
 
 const CAT = {
   screenBg: "#f4f2ef",
@@ -95,7 +88,9 @@ function verticalTitle(v?: string) {
   const x = (v ?? "").toLowerCase();
   if (x === "food") return "Food & Beverages";
   if (x === "grocery" || !x) return "Grocery";
-  return v?.replace(/_/g, " ") ?? "Grocery";
+  if (x === "fashion") return "Fashion store";
+  if (x === "footwear") return "Footwear";
+  return v?.replace(/-/g, " ").replace(/_/g, " ") ?? "Grocery";
 }
 
 const labelStyle = {
@@ -652,13 +647,13 @@ export function StoreOwnerCatalog({
               borderColor: CAT.border,
             }}
           />
-          <View style={{ flexDirection: "row", gap: 10, marginBottom: 14 }}>
+          <View style={{ flexDirection: "row", gap: 10, marginBottom: 8 }}>
             <View style={{ flex: 1 }}>
-              <Text style={labelStyle}>Unit</Text>
+              <Text style={labelStyle}>Unit / pack / size</Text>
               <TextInput
                 value={newProduct.unit}
                 onChangeText={(v) => setNewProduct((p) => ({ ...p, unit: v }))}
-                placeholder="1 kg"
+                placeholder="e.g. 500 g, 1 pc, M, XL"
                 placeholderTextColor={CAT.muted}
                 style={{
                   backgroundColor: CAT.inputBg,
@@ -716,6 +711,18 @@ export function StoreOwnerCatalog({
               />
             </View>
           </View>
+          <Text
+            style={{
+              color: CAT.muted,
+              fontWeight: "600",
+              fontSize: 11,
+              fontFamily: FONT_BODY,
+              marginBottom: 14,
+              lineHeight: 16,
+            }}
+          >
+            Sizes: XS, S, M, L, XL, XXL — or weight/pack (500 g, 1 pc…)
+          </Text>
           <Text style={labelStyle}>Current Stock</Text>
           <View style={{ flexDirection: "row", gap: 10, alignItems: "center", marginBottom: 16 }}>
             <TextInput

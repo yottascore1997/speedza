@@ -16,6 +16,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { StoreOwnerCatalog } from "@/components/StoreOwnerCatalog";
 import { api, clearSession, getToken, getUser } from "@/lib/api";
 import { resolveMediaUrl } from "@/lib/assets";
+import { appFonts } from "@/lib/typography";
 
 type StoreMine = {
   id: string;
@@ -81,16 +82,8 @@ type StoreCatalog = {
 
 type OwnerTab = "dashboard" | "orders" | "stock" | "menu";
 
-const FONT_DISPLAY = Platform.select({
-  ios: "SF Pro Display",
-  android: "sans-serif-medium",
-  default: "System",
-});
-const FONT_BODY = Platform.select({
-  ios: "SF Pro Text",
-  android: "sans-serif",
-  default: "System",
-});
+const FONT_DISPLAY = appFonts.bold;
+const FONT_BODY = appFonts.regular;
 
 const nextStatusMap: Record<string, string> = {
   PLACED: "PREPARING",

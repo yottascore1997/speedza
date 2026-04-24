@@ -19,6 +19,7 @@ import { theme } from "@/lib/theme";
 import { resolveMediaUrl } from "@/lib/assets";
 import { CommonShopHeader } from "@/components/CommonShopHeader";
 import { ProductPriceOfferRow } from "@/components/ProductPriceOfferRow";
+import { rms, rs } from "@/lib/responsive";
 
 function statusPillColors(status: string): { bg: string; text: string } {
   const s = status.toUpperCase();
@@ -31,15 +32,15 @@ function statusPillColors(status: string): { bg: string; text: string } {
 
 const orderCard = {
   backgroundColor: theme.bgElevated,
-  borderRadius: 22,
-  marginBottom: 14,
+  borderRadius: rs(14),
+  marginBottom: rs(8),
   borderWidth: 1,
   borderColor: theme.border,
   shadowColor: "#000",
-  shadowOffset: { width: 0, height: 5 },
-  shadowOpacity: 0.07,
-  shadowRadius: 12,
-  elevation: 4,
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 0.05,
+  shadowRadius: rs(8),
+  elevation: 2,
 } as const;
 
 type OrderRow = {
@@ -187,15 +188,15 @@ export default function OrdersScreen() {
       <CommonShopHeader safeTop={insets.top} activeKey="__shop__" />
       <FlatList
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 24 + insets.bottom }}
+        contentContainerStyle={{ paddingHorizontal: rs(10), paddingTop: rs(8), paddingBottom: rs(14) + insets.bottom }}
         data={orders}
         keyExtractor={(o) => o.id}
         ListHeaderComponent={
-          <View style={{ marginBottom: 14 }}>
-            <Text style={{ fontSize: 25, fontWeight: "900", color: "#111827", letterSpacing: -0.2 }}>
+          <View style={{ marginBottom: 8 }}>
+            <Text style={{ fontSize: rms(19), fontWeight: "900", color: "#111827", letterSpacing: -0.2 }}>
               Your orders
             </Text>
-            <Text style={{ fontSize: 14, fontWeight: "700", color: theme.textMuted, marginTop: 3 }}>
+            <Text style={{ fontSize: rms(11), fontWeight: "700", color: theme.textMuted, marginTop: 1 }}>
               Track everything in one place
             </Text>
           </View>
@@ -236,28 +237,28 @@ export default function OrdersScreen() {
                 style={{
                   borderBottomWidth: 1,
                   borderBottomColor: theme.border,
-                  paddingHorizontal: 14,
-                  paddingTop: 12,
-                  paddingBottom: 10,
+                  paddingHorizontal: rs(10),
+                  paddingTop: rs(8),
+                  paddingBottom: rs(7),
                   flexDirection: "row",
                   justifyContent: "space-between",
                 }}
               >
-                <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: "800" }}>
+                <Text style={{ color: theme.textMuted, fontSize: rms(11), fontWeight: "800" }}>
                   #{item.id.slice(0, 8).toUpperCase()}
                 </Text>
-                <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, backgroundColor: pill.bg }}>
-                  <Text style={{ fontSize: 12, color: pill.text, fontWeight: "900" }}>{orderStatusLabel(item.status)}</Text>
+                <View style={{ paddingHorizontal: rs(8), paddingVertical: rs(3), borderRadius: 999, backgroundColor: pill.bg }}>
+                  <Text style={{ fontSize: rms(10.5), color: pill.text, fontWeight: "900" }}>{orderStatusLabel(item.status)}</Text>
                 </View>
               </View>
 
-              <View style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
-                <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+              <View style={{ paddingHorizontal: rs(10), paddingVertical: rs(8) }}>
+                <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: rs(9) }}>
                   <View
                     style={{
-                      width: 112,
-                      height: 96,
-                      borderRadius: 16,
+                      width: rs(74),
+                      height: rs(66),
+                      borderRadius: rs(10),
                       backgroundColor: "#f3f4f6",
                       alignItems: "center",
                       justifyContent: "center",
@@ -273,15 +274,15 @@ export default function OrdersScreen() {
                         recyclingKey={firstItem?.product.id ?? firstThumb}
                       />
                     ) : (
-                      <MaterialCommunityIcons name="package-variant" size={40} color={theme.textMuted} />
+                      <MaterialCommunityIcons name="package-variant" size={rs(30)} color={theme.textMuted} />
                     )}
                   </View>
                   <View style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
-                    <Text style={{ color: theme.text, fontSize: 22, fontWeight: "900" }} numberOfLines={2}>
+                    <Text style={{ color: theme.text, fontSize: rms(14.5), fontWeight: "900" }} numberOfLines={2}>
                       {firstItem?.product.name || "Order item"}
                     </Text>
                     {showStoreName(item.store) ? (
-                      <Text style={{ color: theme.textMuted, fontSize: 14, fontWeight: "600", marginTop: 6 }} numberOfLines={1}>
+                      <Text style={{ color: theme.textMuted, fontSize: rms(10.5), fontWeight: "600", marginTop: 3 }} numberOfLines={1}>
                         {item.store.name}
                       </Text>
                     ) : null}
@@ -297,44 +298,18 @@ export default function OrdersScreen() {
                     ) : null}
                   </View>
                   <View style={{ alignItems: "flex-end", paddingTop: 2 }}>
-                    <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: "800" }}>Order total</Text>
-                    <Text style={{ color: "#1d4ed8", fontSize: 21, fontWeight: "900", marginTop: 2 }}>{money(item.totalAmount)}</Text>
-                    <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: "700", marginTop: 2 }}>COD</Text>
+                    <Text style={{ color: theme.textMuted, fontSize: rms(10), fontWeight: "800" }}>Order total</Text>
+                    <Text style={{ color: "#1d4ed8", fontSize: rms(15), fontWeight: "900", marginTop: 2 }}>{money(item.totalAmount)}</Text>
+                    <Text style={{ color: theme.textMuted, fontSize: rms(10.5), fontWeight: "700", marginTop: 1 }}>COD</Text>
                   </View>
                 </View>
 
-                <Text style={{ marginTop: 12, fontSize: 13, color: theme.textMuted, fontWeight: "600" }}>
+                <Text style={{ marginTop: 6, fontSize: rms(10.5), color: theme.textMuted, fontWeight: "600" }}>
                   {new Date(item.createdAt).toLocaleString()}
                 </Text>
-
-                <View
-                  style={{
-                    marginTop: 10,
-                    borderRadius: 14,
-                    borderWidth: 1,
-                    borderColor: theme.border,
-                    backgroundColor: "#f9fafb",
-                    paddingHorizontal: 12,
-                    paddingVertical: 10,
-                  }}
-                >
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                    <Text style={{ color: theme.text, fontSize: 14, fontWeight: "700", flex: 1 }} numberOfLines={2}>
-                      {firstItem ? `${firstItem.quantity}x ${firstItem.product.name}` : "Tap to view details"}
-                    </Text>
-                    <Text style={{ color: theme.text, fontSize: 14, fontWeight: "900" }}>{money(firstItemTotal)}</Text>
-                  </View>
-                  {firstItem ? (
-                    <ProductPriceOfferRow
-                      sellingPrice={firstItem.price}
-                      mrp={typeof firstItem.product.mrp === "number" ? firstItem.product.mrp : 0}
-                      discountPercent={unitDiscountPercent(firstItem.product.mrp, firstItem.price)}
-                      compact
-                      layout="inline"
-                      style={{ marginTop: 8 }}
-                    />
-                  ) : null}
-                </View>
+                <Text style={{ marginTop: 4, fontSize: rms(10), color: theme.textMuted, fontWeight: "700" }}>
+                  Tap to view full items & details
+                </Text>
               </View>
             </Pressable>
           );
@@ -345,17 +320,17 @@ export default function OrdersScreen() {
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" }}>
           <View
             style={{
-              maxHeight: "82%",
+              maxHeight: "78%",
               backgroundColor: "#fff",
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              paddingTop: 14,
-              paddingHorizontal: 16,
-              paddingBottom: 16 + insets.bottom,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              paddingTop: 10,
+              paddingHorizontal: 12,
+              paddingBottom: 12 + insets.bottom,
             }}
           >
             <View style={{ alignItems: "center", marginBottom: 10 }}>
-              <View style={{ width: 56, height: 6, borderRadius: 99, backgroundColor: "#e5e7eb" }} />
+              <View style={{ width: 46, height: 5, borderRadius: 99, backgroundColor: "#e5e7eb" }} />
             </View>
             {activeOrder ? (
               <ScrollView showsVerticalScrollIndicator={false}>

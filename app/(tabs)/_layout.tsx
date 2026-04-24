@@ -68,9 +68,11 @@ export default function TabsLayout() {
       screenOptions={{
         headerStyle: {
           backgroundColor: theme.brandNavOrange,
+          height: 52,
         },
         headerTintColor: "#ffffff",
-        headerTitleStyle: { fontWeight: "800", fontSize: 17, color: "#ffffff" },
+        headerTitleStyle: { fontWeight: "800", fontSize: 15, color: "#ffffff" },
+        headerTitleContainerStyle: { paddingVertical: 0 },
         headerShadowVisible: false,
         tabBarActiveTintColor: theme.brandNavOrange,
         tabBarInactiveTintColor: "#6b7280",
@@ -101,12 +103,8 @@ export default function TabsLayout() {
         options={{
           headerShown: false,
           title: "Home",
-          tabBarIcon: ({ size }) => (
-            <Image
-              source={require("../../assets/home.png")}
-              style={{ width: size + 4, height: size + 4 }}
-              resizeMode="contain"
-            />
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="home-outline" size={size} color={color} />
           ),
         }}
       />
@@ -171,7 +169,7 @@ export default function TabsLayout() {
         name="store/[id]"
         options={{
           href: null,
-          headerShown: true,
+          headerShown: false,
           title: "Store",
         }}
       />
@@ -179,7 +177,7 @@ export default function TabsLayout() {
         name="product/[id]"
         options={{
           href: null,
-          headerShown: true,
+          headerShown: false,
           title: "Product",
         }}
       />

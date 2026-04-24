@@ -1,30 +1,23 @@
-import { useCallback, useMemo, useState } from "react";
-import { View, Text, Pressable, Alert, ScrollView, ActivityIndicator, TextInput } from "react-native";
+import { useCallback, useState } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  Alert,
+  ScrollView,
+  ActivityIndicator,
+  TextInput,
+  Platform,
+  StyleSheet,
+} from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { api, clearSession, getApiBase, getToken, getUser, type User } from "@/lib/api";
 import { resolveMediaUrl } from "@/lib/assets";
-import { theme } from "@/lib/theme";
-import { CommonShopHeader } from "@/components/CommonShopHeader";
-
-type OrderRow = {
-  id: string;
-  status: string;
-  totalAmount: number;
-  createdAt: string;
-  store: { name: string; shopVertical?: string | null };
-  items?: { quantity: number; price: number; product: { name: string } }[];
-};
-
-/** Profile order cards: show store line only for food shops (same as Orders tab). */
-function showStoreName(store: { shopVertical?: string | null } | undefined): boolean {
-  const v = (store?.shopVertical ?? "").toLowerCase().trim();
-  return v === "food" || v.startsWith("food-");
-}
-
 type AddressRow = {
   label?: string | null;
   address: string;
@@ -41,43 +34,37 @@ type ListRequestRow = {
 
 const ALLOWED_ROLES = new Set(["CUSTOMER", "STORE_OWNER", "DELIVERY", "ADMIN"]);
 
-const cardElevated = {
-  backgroundColor: theme.bgElevated,
-  borderRadius: 20,
-  borderWidth: 1,
-  borderColor: theme.border,
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.07,
-  shadowRadius: 12,
-  elevation: 4,
+/** Profile — calm slate + Speedza brand blue (theme) */
+const Z = {
+  canvas: "#f1f5f9",
+  ink: "#0f172a",
+  inkSoft: "#334155",
+  muted: "#64748b",
+  muted2: "#94a3b8",
+  line: "#e2e8f0",
+  rowRule: "#f1f5f9",
+  card: "#ffffff",
+  brand: "#2563eb",
+  brandSoft: "#eff6ff",
+  walletFrom: "#eff6ff",
+  walletTo: "#ffffff",
+  walletBorder: "#bfdbfe",
+  walletRule: "#e0f2fe",
+  avatarBg: "#dbeafe",
+  avatarIcon: "#1d4ed8",
+  newGreen: "#059669",
+  slateIconBg: "#f1f5f9",
 } as const;
 
-function statusPillColors(status: string): { bg: string; text: string } {
-  const s = status.toUpperCase();
-  if (s.includes("DELIVERED") || s.includes("COMPLETED")) return { bg: "#dcfce7", text: "#166534" };
-  if (s.includes("CANCEL")) return { bg: "#fee2e2", text: "#991b1b" };
-  if (s.includes("OUT") || s.includes("PICK") || s.includes("DISPATCH")) return { bg: "#dbeafe", text: "#1e40af" };
-  if (s.includes("PENDING") || s.includes("PLACED") || s.includes("CONFIRM")) return { bg: "#fef3c7", text: "#92400e" };
-  return { bg: "#f3f4f6", text: "#374151" };
-}
-
-function isOrderToday(iso: string) {
-  const d = new Date(iso);
-  const n = new Date();
-  return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
-}
-
-function initialsFromName(name: string) {
-  return (
-    name
-      .split(/\s+/)
-      .map((w) => w[0] || "")
-      .join("")
-      .slice(0, 2)
-      .toUpperCase() || "U"
-  );
-}
+const cardLift =
+  Platform.OS === "ios"
+    ? {
+        shadowColor: "#0f172a",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.07,
+        shadowRadius: 12,
+      }
+    : { elevation: 2 };
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -85,30 +72,17 @@ export default function AccountScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [address, setAddress] = useState<AddressRow | null>(null);
-  const [orders, setOrders] = useState<OrderRow[]>([]);
   const [listRequests, setListRequests] = useState<ListRequestRow[]>([]);
   const [listImageUri, setListImageUri] = useState<string | null>(null);
   const [listNote, setListNote] = useState("");
   const [sendingList, setSendingList] = useState(false);
   const [loading, setLoading] = useState(true);
   const [roleErr, setRoleErr] = useState(false);
-  const [ordersErr, setOrdersErr] = useState<string | null>(null);
-
-  const { todayOrders, pastOrders } = useMemo(() => {
-    const today: OrderRow[] = [];
-    const past: OrderRow[] = [];
-    for (const o of orders) {
-      if (isOrderToday(o.createdAt)) today.push(o);
-      else past.push(o);
-    }
-    return { todayOrders: today, pastOrders: past };
-  }, [orders]);
 
   useFocusEffect(
     useCallback(() => {
       void (async () => {
         setLoading(true);
-        setOrdersErr(null);
         const token = await getToken();
         const localUser = await getUser();
         if (!token || !localUser) {
@@ -127,10 +101,9 @@ export default function AccountScreen() {
 
         setRoleErr(false);
         setUser(localUser);
-        const [meRes, addrRes, ordRes, listRes] = await Promise.all([
+        const [meRes, addrRes, listRes] = await Promise.all([
           api<{ user: { imageUrl: string | null } }>("/api/user/me"),
           api<{ address: AddressRow | null }>("/api/user/address"),
-          api<{ orders: OrderRow[] }>("/api/orders/user?limit=40"),
           api<{ requests: ListRequestRow[] }>("/api/list-requests?limit=15"),
         ]);
         if (meRes.ok && meRes.data?.user) {
@@ -142,12 +115,6 @@ export default function AccountScreen() {
           setAddress(addrRes.data.address);
         } else {
           setAddress(null);
-        }
-        if (ordRes.ok && ordRes.data?.orders) {
-          setOrders(ordRes.data.orders);
-        } else {
-          setOrders([]);
-          setOrdersErr(ordRes.error || "Could not load orders");
         }
         if (listRes.ok && listRes.data?.requests) setListRequests(listRes.data.requests);
         else setListRequests([]);
@@ -223,12 +190,17 @@ export default function AccountScreen() {
     }
   }
 
+  const profileCanvas = Z.canvas;
+  const backBtnLift =
+    Platform.OS === "ios"
+      ? { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 6 }
+      : { elevation: 3 };
+
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: theme.screenBg }}>
-        <CommonShopHeader safeTop={insets.top} activeKey="__shop__" />
+      <View style={{ flex: 1, backgroundColor: profileCanvas, paddingTop: insets.top }}>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={theme.primary} />
+          <ActivityIndicator size="large" color={Z.brand} />
         </View>
       </View>
     );
@@ -236,19 +208,45 @@ export default function AccountScreen() {
 
   if (!user) {
     return (
-      <View style={{ flex: 1, backgroundColor: theme.screenBg }}>
-        <CommonShopHeader safeTop={insets.top} activeKey="__shop__" />
-        <View style={{ padding: 16, flex: 1 }}>
-        <Text style={{ color: theme.text, fontWeight: "900", fontSize: 18 }}>Sign in to open profile</Text>
-        <Text style={{ marginTop: 6, color: theme.textMuted, fontWeight: "600" }}>
-          Your photo, address and orders are tied to your account.
-        </Text>
-        <Pressable
-          onPress={() => router.push("/login")}
-          style={{ marginTop: 16, backgroundColor: theme.primary, paddingVertical: 14, borderRadius: 14 }}
+      <View style={{ flex: 1, backgroundColor: profileCanvas }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingHorizontal: 16,
+            paddingTop: insets.top + 8,
+            paddingBottom: 12,
+          }}
         >
-          <Text style={{ color: "#fff", textAlign: "center", fontWeight: "800" }}>Sign in</Text>
-        </Pressable>
+          <Pressable
+            onPress={() => router.back()}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: "#fff",
+              alignItems: "center",
+              justifyContent: "center",
+              ...backBtnLift,
+            }}
+          >
+            <MaterialCommunityIcons name="chevron-left" size={26} color="#111827" />
+          </Pressable>
+          <Text style={{ fontSize: 18, fontWeight: "800", color: "#111827" }}>Profile</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={{ padding: 16, flex: 1 }}>
+          <Text style={{ color: "#111827", fontWeight: "900", fontSize: 18 }}>Sign in to open profile</Text>
+          <Text style={{ marginTop: 6, color: "#6b7280", fontWeight: "600" }}>
+            Your photo, address and orders are tied to your account.
+          </Text>
+          <Pressable
+            onPress={() => router.push("/login")}
+            style={{ marginTop: 16, backgroundColor: Z.brand, paddingVertical: 14, borderRadius: 14 }}
+          >
+            <Text style={{ color: "#fff", textAlign: "center", fontWeight: "800" }}>Sign in</Text>
+          </Pressable>
         </View>
       </View>
     );
@@ -256,332 +254,535 @@ export default function AccountScreen() {
 
   if (roleErr) {
     return (
-      <View style={{ flex: 1, backgroundColor: theme.screenBg }}>
-        <CommonShopHeader safeTop={insets.top} activeKey="__shop__" />
-        <View style={{ padding: 16, flex: 1 }}>
+      <View style={{ flex: 1, backgroundColor: profileCanvas }}>
         <View
           style={{
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: "#fcd34d",
-            backgroundColor: "#fffbeb",
-            padding: 16,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingHorizontal: 16,
+            paddingTop: insets.top + 8,
+            paddingBottom: 12,
           }}
         >
-          <Text style={{ color: "#78350f", fontWeight: "800" }}>Customer account required for this page.</Text>
           <Pressable
-            onPress={() => router.push("/login")}
-            style={{ marginTop: 12, backgroundColor: theme.primary, paddingVertical: 12, borderRadius: 10 }}
+            onPress={() => router.back()}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: "#fff",
+              alignItems: "center",
+              justifyContent: "center",
+              ...backBtnLift,
+            }}
           >
-            <Text style={{ color: "#fff", textAlign: "center", fontWeight: "800" }}>Customer login</Text>
+            <MaterialCommunityIcons name="chevron-left" size={26} color="#111827" />
           </Pressable>
+          <Text style={{ fontSize: 18, fontWeight: "800", color: "#111827" }}>Profile</Text>
+          <View style={{ width: 40 }} />
         </View>
+        <View style={{ padding: 16, flex: 1 }}>
+          <View
+            style={{
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: "#fcd34d",
+              backgroundColor: "#fffbeb",
+              padding: 16,
+            }}
+          >
+            <Text style={{ color: "#78350f", fontWeight: "800" }}>Customer account required for this page.</Text>
+            <Pressable
+              onPress={() => router.push("/login")}
+              style={{ marginTop: 12, backgroundColor: Z.brand, paddingVertical: 12, borderRadius: 10 }}
+            >
+              <Text style={{ color: "#fff", textAlign: "center", fontWeight: "800" }}>Customer login</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     );
   }
 
   const displayName = user.name || "Customer";
-  const initials = initialsFromName(displayName);
 
-  return (
-    <View style={{ flex: 1, backgroundColor: theme.screenBg }}>
-      <CommonShopHeader safeTop={insets.top} activeKey="__shop__" />
-    <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={{ padding: 16, paddingBottom: 24 + insets.bottom }}
+  const type = {
+    headerTitle: { fontSize: 17, fontWeight: "700" as const, color: Z.ink, letterSpacing: -0.3 },
+    name: { fontSize: 20, fontWeight: "700" as const, color: Z.ink, letterSpacing: -0.4 },
+    phone: { fontSize: 14, fontWeight: "500" as const, color: Z.muted, marginTop: 4 },
+    section: { fontSize: 12, fontWeight: "700" as const, color: Z.muted, letterSpacing: 0.6 },
+    listTitle: { fontSize: 15, fontWeight: "600" as const, color: Z.ink },
+    listSub: { fontSize: 13, fontWeight: "500" as const, color: Z.muted, marginTop: 2 },
+    quickLabel: { fontSize: 12, fontWeight: "600" as const, color: Z.inkSoft, textAlign: "center" as const, marginTop: 10, lineHeight: 15 },
+    walletTitle: { fontSize: 15, fontWeight: "700" as const, color: Z.ink, letterSpacing: -0.2 },
+    balanceLead: { fontSize: 13, fontWeight: "500" as const, color: Z.muted },
+    balanceAmt: { fontSize: 15, fontWeight: "700" as const, color: Z.ink },
+    btnOutline: { fontSize: 13, fontWeight: "700" as const, color: Z.brand },
+  };
+
+  const quickCard = (opts: {
+    icon: keyof typeof MaterialCommunityIcons.glyphMap;
+    label: string;
+    onPress: () => void;
+    tone: "brand" | "slate";
+  }) => {
+    const bg = opts.tone === "brand" ? Z.brandSoft : "#f8fafc";
+    const border = opts.tone === "brand" ? "#dbeafe" : Z.line;
+    const iconC = opts.tone === "brand" ? Z.brand : Z.inkSoft;
+    return (
+      <Pressable
+        key={opts.label}
+        onPress={opts.onPress}
+        android_ripple={{ color: "rgba(37,99,235,0.12)" }}
+        style={({ pressed }) => ({
+          flex: 1,
+          minHeight: 100,
+          backgroundColor: bg,
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: border,
+          alignItems: "center",
+          justifyContent: "center",
+          paddingVertical: 14,
+          paddingHorizontal: 6,
+          opacity: pressed ? 0.92 : 1,
+          ...cardLift,
+        })}
+      >
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 14,
+            backgroundColor: opts.tone === "brand" ? "rgba(37,99,235,0.12)" : "rgba(15,23,42,0.06)",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <MaterialCommunityIcons name={opts.icon} size={24} color={iconC} />
+        </View>
+        <Text style={type.quickLabel} numberOfLines={2}>
+          {opts.label}
+        </Text>
+      </Pressable>
+    );
+  };
+
+  const infoRow = (opts: {
+    icon: keyof typeof MaterialCommunityIcons.glyphMap;
+    title: string;
+    subtitle?: string;
+    onPress: () => void;
+    isLast?: boolean;
+  }) => (
+    <Pressable
+      key={opts.title}
+      onPress={opts.onPress}
+      android_ripple={{ color: "rgba(15,23,42,0.04)" }}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 13,
+        paddingHorizontal: 14,
+        borderBottomWidth: opts.isLast ? 0 : StyleSheet.hairlineWidth,
+        borderBottomColor: Z.rowRule,
+        backgroundColor: pressed ? "#f8fafc" : "transparent",
+      })}
     >
       <View
         style={{
-          ...cardElevated,
-          padding: 18,
-          marginBottom: 16,
+          width: 38,
+          height: 38,
+          borderRadius: 12,
+          backgroundColor: Z.slateIconBg,
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <View
+        <MaterialCommunityIcons name={opts.icon} size={20} color={Z.inkSoft} />
+      </View>
+      <View style={{ flex: 1, marginLeft: 12 }}>
+        <Text style={type.listTitle}>{opts.title}</Text>
+        {opts.subtitle ? <Text style={type.listSub}>{opts.subtitle}</Text> : null}
+      </View>
+      <MaterialCommunityIcons name="chevron-right" size={20} color="#cbd5e1" />
+    </Pressable>
+  );
+
+  return (
+    <View style={{ flex: 1, backgroundColor: profileCanvas }}>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: 12,
+          paddingTop: insets.top + 6,
+          paddingBottom: 10,
+        }}
+      >
+        <View style={{ width: 44, alignItems: "flex-start" }}>
+          <Pressable
+            onPress={() => router.back()}
             style={{
-              width: 84,
-              height: 84,
-              borderRadius: 42,
-              overflow: "hidden",
-              backgroundColor: "#fde68a",
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: Z.card,
               alignItems: "center",
               justifyContent: "center",
-              borderWidth: 2,
-              borderColor: "#fff",
+              ...backBtnLift,
+            }}
+          >
+            <MaterialCommunityIcons name="chevron-left" size={24} color={Z.ink} />
+          </Pressable>
+        </View>
+        <View style={{ flex: 1, alignItems: "center" }}>
+          <Text style={type.headerTitle}>Profile</Text>
+        </View>
+        <View style={{ width: 44 }} />
+      </View>
+
+      <ScrollView
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 24 + insets.bottom }}
+      >
+        <LinearGradient
+          colors={["#ffffff", "#f8fafc"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: Z.line,
+            paddingVertical: 18,
+            paddingHorizontal: 16,
+            flexDirection: "row",
+            alignItems: "center",
+            overflow: "hidden",
+            ...cardLift,
+          }}
+        >
+          <View style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, backgroundColor: Z.brand }} />
+          <View
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 32,
+              borderWidth: 3,
+              borderColor: "#bfdbfe",
+              overflow: "hidden",
+              backgroundColor: Z.avatarBg,
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
             {imageUrl ? (
               <Image source={{ uri: imageUrl }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
             ) : (
-              <Text style={{ fontSize: 26, fontWeight: "900", color: "#78350f" }}>{initials}</Text>
+              <MaterialCommunityIcons name="account" size={32} color={Z.avatarIcon} />
             )}
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 22, fontWeight: "900", color: theme.text }}>{displayName}</Text>
-            <Text style={{ fontSize: 14, color: theme.textMuted, marginTop: 4, fontWeight: "600" }}>{user.phone}</Text>
-            <Pressable
-              onPress={() => router.push("/profile")}
-              style={{
-                marginTop: 10,
-                alignSelf: "flex-start",
-                borderWidth: 1,
-                borderColor: "#fdba74",
-                backgroundColor: "#fff7ed",
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 999,
-              }}
-            >
-              <Text style={{ color: "#9a3412", fontWeight: "800", fontSize: 12 }}>Change photo</Text>
-            </Pressable>
-          </View>
-        </View>
-        <View style={{ marginTop: 14, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 14 }}>
-          <Text style={{ fontSize: 11, fontWeight: "900", color: theme.textDim, letterSpacing: 0.6 }}>
-            DELIVERY ADDRESS
-          </Text>
-          {address ? (
-            <Text style={{ color: theme.text, fontWeight: "700", marginTop: 6 }}>
-              <Text style={{ color: theme.textMuted }}>{address.label || "Home"}: </Text>
-              {address.address}
+          <View style={{ flex: 1, marginLeft: 14, minWidth: 0 }}>
+            <Text style={type.name} numberOfLines={1}>
+              {displayName}
             </Text>
-          ) : (
-            <Text style={{ color: theme.textMuted, fontWeight: "600", marginTop: 6 }}>No address saved yet.</Text>
-          )}
-          <Pressable
-            onPress={() => router.push("/profile")}
-            style={{
-              marginTop: 10,
-              alignSelf: "flex-start",
-              borderWidth: 1,
-              borderColor: "#fdba74",
-              backgroundColor: "#fff7ed",
-              paddingHorizontal: 10,
-              paddingVertical: 6,
-              borderRadius: 999,
-            }}
-          >
-            <Text style={{ color: "#9a3412", fontWeight: "800", fontSize: 12 }}>{address ? "Change" : "Add"}</Text>
-          </Pressable>
+            <Text style={type.phone}>{user.phone}</Text>
+          </View>
+        </LinearGradient>
+
+        <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
+          {quickCard({
+            icon: "shopping-outline",
+            label: "Your Orders",
+            onPress: () => router.push("/orders"),
+            tone: "brand",
+          })}
+          {quickCard({
+            icon: "message-text-outline",
+            label: "Help & Support",
+            onPress: () => router.push("/help"),
+            tone: "slate",
+          })}
         </View>
 
-        <View style={{ marginTop: 14, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 14, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          <Pressable
-            onPress={() => router.push("/help")}
-            style={{ borderWidth: 1, borderColor: "#a7f3d0", backgroundColor: "#ecfdf5", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 }}
-          >
-            <Text style={{ color: "#065f46", fontWeight: "900", fontSize: 12 }}>Help & support</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/orders")}
-            style={{ borderWidth: 1, borderColor: theme.border, backgroundColor: theme.bgElevated, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 }}
-          >
-            <Text style={{ color: theme.text, fontWeight: "900", fontSize: 12 }}>All orders</Text>
-          </Pressable>
-          <Pressable
-            onPress={() =>
-              Alert.alert("Sign out?", "You will need to sign in again.", [
-                { text: "Cancel", style: "cancel" },
-                { text: "Sign out", style: "destructive", onPress: () => void logout() },
-              ])
-            }
-            style={{ borderWidth: 1, borderColor: "#fecdd3", backgroundColor: "#fff1f2", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 }}
-          >
-            <Text style={{ color: "#9f1239", fontWeight: "900", fontSize: 12 }}>Log out</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <View style={{ ...cardElevated, padding: 16, marginBottom: 16 }}>
-        <Text style={{ fontSize: 17, fontWeight: "900", color: theme.text }}>Upload grocery list photo</Text>
-        <Text style={{ marginTop: 4, color: theme.textMuted, fontWeight: "600" }}>
-          Send one photo of your written list. Admin will process and deliver.
-        </Text>
-        <View style={{ marginTop: 12, flexDirection: "row", gap: 8 }}>
-          <Pressable
-            onPress={() => void pickListImage()}
-            style={{ borderWidth: 1, borderColor: "#86efac", backgroundColor: "#ecfdf5", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, flexDirection: "row", alignItems: "center", gap: 6 }}
-          >
-            <MaterialCommunityIcons name="image-plus" size={16} color="#166534" />
-            <Text style={{ color: "#166534", fontWeight: "900", fontSize: 12 }}>{listImageUri ? "Change photo" : "Pick photo"}</Text>
-          </Pressable>
-          <Pressable
-            disabled={sendingList || !listImageUri}
-            onPress={() => void submitListRequest()}
-            style={{ borderWidth: 1, borderColor: "#16a34a", backgroundColor: "#16a34a", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, opacity: sendingList || !listImageUri ? 0.55 : 1, flexDirection: "row", alignItems: "center", gap: 6 }}
-          >
-            <MaterialCommunityIcons name="send" size={16} color="#fff" />
-            <Text style={{ color: "#fff", fontWeight: "900", fontSize: 12 }}>{sendingList ? "Sending..." : "Send to admin"}</Text>
-          </Pressable>
-        </View>
-        {listImageUri ? (
-          <View style={{ marginTop: 10, borderWidth: 1, borderColor: theme.border, borderRadius: 12, overflow: "hidden", backgroundColor: "#fff" }}>
-            <Image source={{ uri: listImageUri }} style={{ width: "100%", height: 160 }} contentFit="cover" />
-          </View>
-        ) : null}
-        <TextInput
-          value={listNote}
-          onChangeText={setListNote}
-          placeholder="Optional note for admin (e.g. 2kg sugar, good quality)"
-          placeholderTextColor={theme.textDim}
-          multiline
-          style={{ marginTop: 10, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.bgElevated, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, color: theme.text, minHeight: 44, textAlignVertical: "top" }}
-        />
-        {listRequests.length > 0 ? (
-          <View style={{ marginTop: 12, gap: 8 }}>
-            <Text style={{ fontSize: 13, color: theme.textDim, fontWeight: "900", letterSpacing: 0.4 }}>
-              LIST REQUEST STATUS
-            </Text>
-            {listRequests.slice(0, 4).map((r) => (
-              <View key={r.id} style={{ borderWidth: 1, borderColor: theme.border, backgroundColor: "#f8fafc", borderRadius: 12, padding: 10 }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <Text style={{ color: theme.text, fontWeight: "800", fontSize: 12 }}>#{r.id.slice(0, 8)}</Text>
-                  <Text style={{ color: "#166534", fontWeight: "900", fontSize: 11 }}>{r.status.replace(/_/g, " ")}</Text>
-                </View>
-                <Text style={{ marginTop: 5, color: theme.textMuted, fontSize: 11, fontWeight: "600" }}>
-                  {new Date(r.createdAt).toLocaleString()}
-                </Text>
-                {r.adminNote ? (
-                  <Text style={{ marginTop: 4, color: theme.text, fontSize: 11, fontWeight: "700" }}>
-                    Admin: {r.adminNote}
-                  </Text>
-                ) : null}
-              </View>
-            ))}
-          </View>
-        ) : null}
-      </View>
-
-      {ordersErr ? (
-        <View style={{ marginBottom: 12, borderWidth: 1, borderColor: theme.roseBorder, backgroundColor: theme.roseBg, padding: 12, borderRadius: 12 }}>
-          <Text style={{ color: theme.roseText, fontWeight: "600" }}>{ordersErr}</Text>
-        </View>
-      ) : null}
-
-      <View style={{ marginBottom: 20 }}>
-        <Text style={{ fontSize: 18, fontWeight: "900", color: theme.text }}>Today&apos;s orders</Text>
-        <Text style={{ fontSize: 12, color: theme.textMuted, marginTop: 2, fontWeight: "600" }}>
-          Placed today in your timezone
-        </Text>
-        {todayOrders.length === 0 ? (
-          <View style={{ marginTop: 10, borderWidth: 1, borderColor: theme.border, borderStyle: "dashed", borderRadius: 18, padding: 22, backgroundColor: theme.bgElevated }}>
-            <Text style={{ color: theme.textMuted, textAlign: "center", fontWeight: "600" }}>No orders today</Text>
-          </View>
-        ) : (
-          <View style={{ marginTop: 10, gap: 10 }}>
-            {todayOrders.map((o) => (
-              <View key={o.id} style={{ ...cardElevated, overflow: "hidden", padding: 0 }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, backgroundColor: "#f8faf9", borderBottomWidth: 1, borderBottomColor: theme.border }}>
-                  <Text style={{ fontSize: 11, color: theme.textMuted, fontWeight: "700" }}>#{o.id.slice(0, 8).toUpperCase()}</Text>
-                  <View
-                    style={{
-                      paddingHorizontal: 10,
-                      paddingVertical: 4,
-                      borderRadius: 999,
-                      backgroundColor: statusPillColors(o.status).bg,
-                    }}
-                  >
-                    <Text style={{ fontSize: 11, color: statusPillColors(o.status).text, fontWeight: "800", textTransform: "capitalize" }}>
-                      {o.status.replace(/_/g, " ").toLowerCase()}
-                    </Text>
-                  </View>
-                </View>
-                <View style={{ padding: 12 }}>
-                  {showStoreName(o.store) ? (
-                    <Text style={{ fontSize: 16, fontWeight: "900", color: theme.text }}>{o.store.name}</Text>
-                  ) : null}
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      color: theme.textMuted,
-                      marginTop: showStoreName(o.store) ? 3 : 0,
-                      fontWeight: "600",
-                    }}
-                  >
-                    {new Date(o.createdAt).toLocaleString()}
-                  </Text>
-                  {o.items?.length ? (
-                    <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 8, gap: 4 }}>
-                      {o.items.slice(0, 3).map((i, idx) => (
-                        <View key={idx} style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                          <Text style={{ flex: 1, fontSize: 12, color: theme.textMuted, fontWeight: "600" }} numberOfLines={1}>
-                            {i.quantity}x {i.product.name}
-                          </Text>
-                          <Text style={{ fontSize: 12, color: theme.textMuted, fontWeight: "700" }}>
-                            ₹{Math.round(i.price * i.quantity * 100) / 100}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  ) : null}
-                  <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 8, flexDirection: "row", justifyContent: "space-between" }}>
-                    <Text style={{ fontSize: 12, color: theme.textMuted, fontWeight: "700" }}>Total (COD)</Text>
-                    <Text style={{ fontSize: 17, color: "#1d4ed8", fontWeight: "900" }}>₹{o.totalAmount}</Text>
-                  </View>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
-
-      <View>
-        <Text style={{ fontSize: 18, fontWeight: "900", color: theme.text }}>Past orders</Text>
-        <Text style={{ fontSize: 12, color: theme.textMuted, marginTop: 2, fontWeight: "600" }}>Earlier deliveries</Text>
-        {pastOrders.length === 0 ? (
-          <View style={{ marginTop: 10, borderWidth: 1, borderColor: theme.border, borderStyle: "dashed", borderRadius: 18, padding: 22, backgroundColor: theme.bgElevated }}>
-            <Text style={{ color: theme.textMuted, textAlign: "center", fontWeight: "600" }}>No past orders yet</Text>
-          </View>
-        ) : (
-          <View style={{ marginTop: 10, gap: 10 }}>
-            {pastOrders.map((o) => (
-              <View key={o.id} style={{ ...cardElevated, padding: 14 }}>
-                {showStoreName(o.store) ? (
-                  <Text style={{ fontWeight: "800", fontSize: 16, color: theme.text }}>{o.store.name}</Text>
-                ) : null}
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: 8,
-                    marginTop: showStoreName(o.store) ? 8 : 0,
-                  }}
-                >
-                  <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: statusPillColors(o.status).bg }}>
-                    <Text style={{ fontSize: 11, color: statusPillColors(o.status).text, fontWeight: "800", textTransform: "capitalize" }}>
-                      {o.status.replace(/_/g, " ").toLowerCase()}
-                    </Text>
-                  </View>
-                  <Text style={{ color: theme.text, fontWeight: "900" }}>₹{o.totalAmount}</Text>
-                </View>
-                <Text style={{ fontSize: 12, color: theme.textDim, marginTop: 5, fontWeight: "500" }}>
-                  {new Date(o.createdAt).toLocaleString()}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
-
-      {user?.role === "DELIVERY" ? (
-        <Pressable
-          onPress={() => router.push("/delivery")}
+        <View
           style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 12,
-            ...cardElevated,
-            padding: 16,
-            marginTop: 8,
+            marginTop: 12,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: Z.walletBorder,
+            overflow: "hidden",
+            ...cardLift,
           }}
         >
-          <MaterialCommunityIcons name="bike-fast" size={24} color={theme.primary} />
-          <Text style={{ fontWeight: "800", color: theme.text, fontSize: 16 }}>Delivery dashboard</Text>
+          <LinearGradient colors={[Z.walletFrom, Z.walletTo]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingHorizontal: 16, paddingVertical: 14 }}>
+            <Pressable
+              onPress={() => Alert.alert("Speedza Cash", "Wallet and gift cards coming soon.")}
+              android_ripple={{ color: "rgba(37,99,235,0.08)" }}
+              style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    backgroundColor: "rgba(37,99,235,0.1)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <MaterialCommunityIcons name="wallet-outline" size={22} color={Z.brand} />
+                </View>
+                <Text style={[type.walletTitle, { flex: 1 }]}>Speedza Cash & Gift Card</Text>
+                <View style={{ backgroundColor: Z.newGreen, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                  <Text style={{ fontSize: 9, fontWeight: "700", color: "#fff" }}>NEW</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={20} color="#cbd5e1" />
+              </View>
+            </Pressable>
+            <View style={{ marginTop: 12, marginBottom: 12, height: StyleSheet.hairlineWidth, backgroundColor: Z.walletRule }} />
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <View>
+                <Text style={type.balanceLead}>Available balance</Text>
+                <Text style={[type.balanceAmt, { marginTop: 2 }]}>₹0</Text>
+              </View>
+              <Pressable
+                onPress={() => Alert.alert("Add balance", "Coming soon.")}
+                android_ripple={{ color: "rgba(37,99,235,0.12)" }}
+                style={({ pressed }) => ({
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: Z.brand,
+                  backgroundColor: "rgba(255,255,255,0.9)",
+                  opacity: pressed ? 0.88 : 1,
+                })}
+              >
+                <Text style={type.btnOutline}>Add balance</Text>
+              </Pressable>
+            </View>
+          </LinearGradient>
+        </View>
+
+        <Text style={[type.section, { marginTop: 22, marginBottom: 10 }]}>YOUR INFORMATION</Text>
+        <View
+          style={{
+            backgroundColor: Z.card,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: Z.line,
+            overflow: "hidden",
+            ...cardLift,
+          }}
+        >
+          {infoRow({
+            icon: "cash-refund",
+            title: "Your Refunds",
+            onPress: () => router.push("/orders"),
+          })}
+          {infoRow({
+            icon: "credit-card-outline",
+            title: "E-Gift Cards",
+            onPress: () => Alert.alert("E-Gift Cards", "Coming soon."),
+          })}
+          {infoRow({
+            icon: "message-text-outline",
+            title: "Help & Support",
+            onPress: () => router.push("/help"),
+          })}
+          {infoRow({
+            icon: "map-marker-outline",
+            title: "Saved Addresses",
+            subtitle: address ? "1 address" : "Tap to add",
+            onPress: () => router.push("/profile"),
+          })}
+          {infoRow({
+            icon: "account-circle-outline",
+            title: "Profile",
+            onPress: () => router.push("/profile"),
+            isLast: true,
+          })}
+        </View>
+
+        <Pressable
+          onPress={() =>
+            Alert.alert("Sign out?", "You will need to sign in again.", [
+              { text: "Cancel", style: "cancel" },
+              { text: "Sign out", style: "destructive", onPress: () => void logout() },
+            ])
+          }
+          android_ripple={{ color: "rgba(220,38,38,0.08)" }}
+          style={({ pressed }) => ({
+            marginTop: 14,
+            backgroundColor: "#fff",
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: "#fecaca",
+            paddingVertical: 14,
+            alignItems: "center",
+            opacity: pressed ? 0.92 : 1,
+            ...cardLift,
+          })}
+        >
+          <Text style={{ fontSize: 14, fontWeight: "700", color: "#dc2626", letterSpacing: 0.2 }}>Sign out</Text>
         </Pressable>
-      ) : null}
+
+        <Text style={[type.section, { marginTop: 22, marginBottom: 10 }]}>MORE FROM SPEEDZA</Text>
+
+        <View
+          style={{
+            backgroundColor: Z.card,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: Z.line,
+            padding: 14,
+            marginBottom: 4,
+            ...cardLift,
+          }}
+        >
+          <Text style={{ fontSize: 15, fontWeight: "700", color: Z.ink, letterSpacing: -0.2 }}>Upload grocery list photo</Text>
+          <Text style={{ marginTop: 4, fontSize: 13, color: Z.muted, fontWeight: "500", lineHeight: 18 }}>
+            Send one photo of your written list. Admin will process and deliver.
+          </Text>
+          <View style={{ marginTop: 12, flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+            <Pressable
+              onPress={() => void pickListImage()}
+              style={{
+                borderWidth: 1,
+                borderColor: Z.line,
+                backgroundColor: "#f8fafc",
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                borderRadius: 12,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <MaterialCommunityIcons name="image-plus" size={18} color={Z.inkSoft} />
+              <Text style={{ color: Z.inkSoft, fontWeight: "600", fontSize: 13 }}>{listImageUri ? "Change photo" : "Pick photo"}</Text>
+            </Pressable>
+            <Pressable
+              disabled={sendingList || !listImageUri}
+              onPress={() => void submitListRequest()}
+              style={{
+                borderWidth: 1,
+                borderColor: Z.brand,
+                backgroundColor: Z.brand,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                borderRadius: 12,
+                opacity: sendingList || !listImageUri ? 0.45 : 1,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <MaterialCommunityIcons name="send" size={18} color="#fff" />
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>{sendingList ? "Sending..." : "Send to admin"}</Text>
+            </Pressable>
+          </View>
+          {listImageUri ? (
+            <View
+              style={{
+                marginTop: 8,
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: Z.line,
+                borderRadius: 8,
+                overflow: "hidden",
+                backgroundColor: "#fff",
+              }}
+            >
+              <Image source={{ uri: listImageUri }} style={{ width: "100%", height: 120 }} contentFit="cover" />
+            </View>
+          ) : null}
+          <TextInput
+            value={listNote}
+            onChangeText={setListNote}
+            placeholder="Optional note for admin"
+            placeholderTextColor={Z.muted2}
+            multiline
+            style={{
+              marginTop: 8,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: Z.line,
+              backgroundColor: "#fafafa",
+              paddingHorizontal: 10,
+              paddingVertical: 8,
+              borderRadius: 8,
+              color: Z.ink,
+              minHeight: 40,
+              fontSize: 13,
+              textAlignVertical: "top",
+            }}
+          />
+          {listRequests.length > 0 ? (
+            <View style={{ marginTop: 10, gap: 6 }}>
+              <Text style={{ fontSize: 11, color: Z.muted2, fontWeight: "600", letterSpacing: 0.3 }}>LIST REQUEST STATUS</Text>
+              {listRequests.slice(0, 4).map((r) => (
+                <View
+                  key={r.id}
+                  style={{
+                    borderWidth: StyleSheet.hairlineWidth,
+                    borderColor: Z.line,
+                    backgroundColor: "#fafafa",
+                    borderRadius: 8,
+                    padding: 8,
+                  }}
+                >
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <Text style={{ color: Z.ink, fontWeight: "600", fontSize: 12 }}>#{r.id.slice(0, 8)}</Text>
+                    <Text style={{ color: Z.brand, fontWeight: "600", fontSize: 11 }}>{r.status.replace(/_/g, " ")}</Text>
+                  </View>
+                  <Text style={{ marginTop: 4, color: Z.muted, fontSize: 11, fontWeight: "400" }}>
+                    {new Date(r.createdAt).toLocaleString()}
+                  </Text>
+                  {r.adminNote ? (
+                    <Text style={{ marginTop: 3, color: Z.ink, fontSize: 11, fontWeight: "500" }}>Admin: {r.adminNote}</Text>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </View>
+
+        {user?.role === "DELIVERY" ? (
+          <Pressable
+            onPress={() => router.push("/delivery")}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+              backgroundColor: Z.card,
+              borderRadius: 12,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: Z.line,
+              paddingVertical: 12,
+              paddingHorizontal: 14,
+              marginTop: 10,
+              ...cardLift,
+            }}
+          >
+            <View
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                backgroundColor: Z.slateIconBg,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <MaterialCommunityIcons name="bike-fast" size={20} color={Z.brand} />
+            </View>
+            <Text style={{ flex: 1, fontWeight: "600", color: Z.ink, fontSize: 15 }}>Delivery dashboard</Text>
+            <MaterialCommunityIcons name="chevron-right" size={20} color="#cbd5e1" />
+          </Pressable>
+        ) : null}
     </ScrollView>
     </View>
   );

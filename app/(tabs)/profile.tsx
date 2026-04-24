@@ -8,10 +8,12 @@ import {
   Alert,
   ScrollView,
   Platform,
+  Modal,
 } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 import { Image } from "expo-image";
 import { api, getApiBase, getToken, getUser, setSession, type User } from "@/lib/api";
 import { theme } from "@/lib/theme";
@@ -35,6 +37,8 @@ export default function ProfileScreen() {
   const [addrText, setAddrText] = useState("");
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
+  const [addressMode, setAddressMode] = useState<"current" | "manual">("current");
+  const [addressModalOpen, setAddressModalOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -106,22 +110,39 @@ export default function ProfileScreen() {
   }
 
   async function saveAddress() {
-    if (!addrText.trim()) {
-      Alert.alert("Address", "Enter address");
-      return;
-    }
-    const la = parseFloat(lat);
-    const ln = parseFloat(lng);
-    if (!Number.isFinite(la) || !Number.isFinite(ln)) {
-      Alert.alert("Address", "Enter valid latitude and longitude");
-      return;
+    let finalAddress = addrText.trim();
+    let la = parseFloat(lat);
+    let ln = parseFloat(lng);
+
+    if (addressMode === "current") {
+      if (!Number.isFinite(la) || !Number.isFinite(ln)) {
+        Alert.alert("Location", "Tap 'Use current location' first.");
+        return;
+      }
+      if (!finalAddress) finalAddress = "Current location";
+    } else {
+      if (!finalAddress) {
+        Alert.alert("Address", "Please type your address.");
+        return;
+      }
+      if (!Number.isFinite(la) || !Number.isFinite(ln)) {
+        const geocoded = await Location.geocodeAsync(finalAddress).catch(() => []);
+        if (!geocoded.length) {
+          Alert.alert("Address", "Could not map this address. Please type a clearer address.");
+          return;
+        }
+        la = geocoded[0]!.latitude;
+        ln = geocoded[0]!.longitude;
+        setLat(String(la));
+        setLng(String(ln));
+      }
     }
     setSaving(true);
     const res = await api<{ address: Address }>("/api/user/address", {
       method: "POST",
       body: JSON.stringify({
         label: "Home",
-        address: addrText.trim(),
+        address: finalAddress,
         latitude: la,
         longitude: ln,
       }),
@@ -132,7 +153,28 @@ export default function ProfileScreen() {
       return;
     }
     setAddr(res.data?.address ?? null);
+    setAddressModalOpen(false);
     Alert.alert("Saved", "Address updated");
+  }
+
+  async function useCurrentLocationAddress() {
+    const perm = await Location.requestForegroundPermissionsAsync();
+    if (perm.status !== "granted") {
+      Alert.alert("Permission needed", "Allow location permission first.");
+      return;
+    }
+    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+    const la = pos.coords.latitude;
+    const ln = pos.coords.longitude;
+    setLat(String(la));
+    setLng(String(ln));
+    const rev = await Location.reverseGeocodeAsync({ latitude: la, longitude: ln }).catch(() => []);
+    if (rev.length) {
+      const r = rev[0]!;
+      const text = [r.name, r.street, r.city, r.region, r.postalCode].filter(Boolean).join(", ");
+      if (text.trim()) setAddrText(text);
+    }
+    Alert.alert("Location captured", "Current location selected.");
   }
 
   async function pickAndUploadAvatar() {
@@ -207,6 +249,7 @@ export default function ProfileScreen() {
   }
 
   return (
+    <>
     <ScrollView style={{ flex: 1, backgroundColor: theme.bg }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
       <View
         style={{
@@ -298,85 +341,34 @@ export default function ProfileScreen() {
         <Text style={{ color: theme.text, fontWeight: "900", fontSize: 16, marginBottom: 8 }}>
           Delivery address
         </Text>
-        <TextInput
-          value={addrText}
-          onChangeText={setAddrText}
-          placeholder="Address (house, street, landmark)"
-          placeholderTextColor={theme.textDim}
-          multiline
+        <View
           style={{
             backgroundColor: theme.bgElevated,
             borderWidth: 1,
             borderColor: theme.border,
-            borderRadius: 14,
-            paddingHorizontal: 14,
-            paddingVertical: 12,
-            color: theme.text,
-            fontWeight: "600",
-            minHeight: 92,
-          }}
-        />
-        <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: theme.textMuted, fontWeight: "800", marginBottom: 6, fontSize: 12 }}>
-              Latitude
-            </Text>
-            <TextInput
-              value={lat}
-              onChangeText={setLat}
-              placeholder="e.g. 28.4595"
-              placeholderTextColor={theme.textDim}
-              keyboardType="numeric"
-              style={{
-                backgroundColor: theme.bgElevated,
-                borderWidth: 1,
-                borderColor: theme.border,
-                borderRadius: 14,
-                paddingHorizontal: 14,
-                paddingVertical: 12,
-                color: theme.text,
-                fontWeight: "700",
-              }}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: theme.textMuted, fontWeight: "800", marginBottom: 6, fontSize: 12 }}>
-              Longitude
-            </Text>
-            <TextInput
-              value={lng}
-              onChangeText={setLng}
-              placeholder="e.g. 77.0266"
-              placeholderTextColor={theme.textDim}
-              keyboardType="numeric"
-              style={{
-                backgroundColor: theme.bgElevated,
-                borderWidth: 1,
-                borderColor: theme.border,
-                borderRadius: 14,
-                paddingHorizontal: 14,
-                paddingVertical: 12,
-                color: theme.text,
-                fontWeight: "700",
-              }}
-            />
-          </View>
-        </View>
-        <Pressable
-          onPress={() => void saveAddress()}
-          disabled={saving}
-          style={{
-            marginTop: 10,
-            backgroundColor: theme.accent,
-            paddingVertical: 14,
-            borderRadius: 14,
-            opacity: saving ? 0.7 : 1,
+            borderRadius: 16,
+            padding: 12,
           }}
         >
-          <Text style={{ color: "#fff", textAlign: "center", fontWeight: "900" }}>
-            {saving ? "Saving…" : addr ? "Update address" : "Save address"}
+          <Text style={{ color: theme.textMuted, fontWeight: "700", fontSize: 12 }}>
+            {addr?.address?.trim() || "No address saved yet."}
           </Text>
-        </Pressable>
+          <Pressable
+            onPress={() => setAddressModalOpen(true)}
+            disabled={saving}
+            style={{
+              marginTop: 10,
+              backgroundColor: theme.accent,
+              paddingVertical: 14,
+              borderRadius: 14,
+              opacity: saving ? 0.7 : 1,
+            }}
+          >
+            <Text style={{ color: "#fff", textAlign: "center", fontWeight: "900" }}>
+              {addr ? "Save Addresses" : "Save Addresses"}
+            </Text>
+          </Pressable>
+        </View>
         {addr ? (
           <Text style={{ marginTop: 8, color: theme.textDim, fontWeight: "700", fontSize: 12 }}>
             Saved as {addr.label}: {Math.round(addr.latitude * 10000) / 10000},{" "}
@@ -385,6 +377,106 @@ export default function ProfileScreen() {
         ) : null}
       </View>
     </ScrollView>
+    <Modal visible={addressModalOpen} transparent animationType="fade" onRequestClose={() => setAddressModalOpen(false)}>
+      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: 18 }}>
+        <View style={{ backgroundColor: "#fff", borderRadius: 18, padding: 14, borderWidth: 1, borderColor: "#e7e5e4" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={{ fontSize: 16, fontWeight: "900", color: "#0f172a" }}>Delivery Address</Text>
+            <Pressable onPress={() => setAddressModalOpen(false)}>
+              <MaterialCommunityIcons name="close" size={22} color="#475569" />
+            </Pressable>
+          </View>
+          <Text style={{ marginTop: 4, color: "#64748b", fontWeight: "600", fontSize: 12 }}>
+            Choose one option and save.
+          </Text>
+
+          <View style={{ marginTop: 10, flexDirection: "row", gap: 8 }}>
+            <Pressable
+              onPress={() => setAddressMode("current")}
+              style={{
+                flex: 1,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: addressMode === "current" ? "#16a34a" : "#e2e8f0",
+                backgroundColor: addressMode === "current" ? "#ecfdf5" : "#fff",
+                paddingVertical: 10,
+              }}
+            >
+              <Text style={{ textAlign: "center", fontWeight: "900", color: "#0f172a", fontSize: 12 }}>
+                Current location
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setAddressMode("manual")}
+              style={{
+                flex: 1,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: addressMode === "manual" ? "#16a34a" : "#e2e8f0",
+                backgroundColor: addressMode === "manual" ? "#ecfdf5" : "#fff",
+                paddingVertical: 10,
+              }}
+            >
+              <Text style={{ textAlign: "center", fontWeight: "900", color: "#0f172a", fontSize: 12 }}>
+                Type manually
+              </Text>
+            </Pressable>
+          </View>
+
+          {addressMode === "current" ? (
+            <Pressable
+              onPress={() => void useCurrentLocationAddress()}
+              style={{
+                marginTop: 10,
+                borderWidth: 1,
+                borderColor: "#cbd5e1",
+                backgroundColor: "#f8fafc",
+                borderRadius: 10,
+                paddingVertical: 11,
+              }}
+            >
+              <Text style={{ textAlign: "center", fontWeight: "900", color: "#0f172a" }}>Use current location</Text>
+            </Pressable>
+          ) : (
+            <TextInput
+              value={addrText}
+              onChangeText={setAddrText}
+              placeholder="Type full address"
+              placeholderTextColor="#94a3b8"
+              multiline
+              style={{
+                marginTop: 10,
+                minHeight: 88,
+                borderWidth: 1,
+                borderColor: "#cbd5e1",
+                borderRadius: 10,
+                paddingHorizontal: 10,
+                paddingVertical: 10,
+                color: "#0f172a",
+                fontWeight: "600",
+              }}
+            />
+          )}
+
+          <Pressable
+            onPress={() => void saveAddress()}
+            disabled={saving}
+            style={{
+              marginTop: 12,
+              backgroundColor: "#16a34a",
+              borderRadius: 10,
+              paddingVertical: 12,
+              opacity: saving ? 0.7 : 1,
+            }}
+          >
+            <Text style={{ textAlign: "center", color: "#fff", fontWeight: "900" }}>
+              {saving ? "Saving..." : "Save address"}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }
 
