@@ -22,6 +22,12 @@ import { CategoryFoodGridAd, isFoodMainCategory } from "@/components/CategoryFoo
 const DEFAULT_LAT = 28.4595;
 const DEFAULT_LNG = 77.0266;
 
+function mapMainKeyForCatalog(routeSlug: string): string {
+  const s = routeSlug.trim().toLowerCase();
+  if (s === "food") return "food-beverages";
+  return routeSlug;
+}
+
 type CatalogCategory = {
   id: string;
   name: string;
@@ -59,6 +65,11 @@ function isFreshMainCategory(slug: string, title: string): boolean {
   );
 }
 
+function isFashionMainCategory(slug: string, title: string): boolean {
+  const k = `${slug} ${title}`.toLowerCase().replace(/_/g, "-");
+  return k.includes("fashion") || k.includes("apparel") || k.includes("clothing");
+}
+
 const FOOD_TRENDING = [
   "28K+ Chilli Cheese Toast ordered last week",
   "33K+ Loaded fries delivered in 10 mins",
@@ -89,6 +100,7 @@ export default function CategoryHubScreen() {
   }>();
 
   const s = decodeURIComponent(Array.isArray(slug) ? slug[0] : slug || "grocery");
+  const catalogMainKey = mapMainKeyForCatalog(s);
   const la = Number(lat) || DEFAULT_LAT;
   const ln = Number(lng) || DEFAULT_LNG;
 
@@ -107,14 +119,14 @@ export default function CategoryHubScreen() {
     setLoading(true);
     const [tree, cat] = await Promise.all([
       api<{ mains: ShopHeaderMain[] }>("/api/master/shop-tree"),
-      api<CatalogRes>(`/api/master/catalog?mainKey=${encodeURIComponent(s)}`),
+      api<CatalogRes>(`/api/master/catalog?mainKey=${encodeURIComponent(catalogMainKey)}`),
     ]);
     setLoading(false);
     if (tree.ok && tree.data?.mains) setMains(tree.data.mains);
     if (cat.ok && cat.data) setData(cat.data);
     else setErr(cat.error || "Could not load categories");
 
-    const shouldLoadFoodStores = isFoodMainCategory(s, cat.data?.mainCategory?.name ?? s);
+    const shouldLoadFoodStores = isFoodMainCategory(catalogMainKey, cat.data?.mainCategory?.name ?? s);
     if (!shouldLoadFoodStores) {
       setFoodStores([]);
       return;
@@ -128,7 +140,7 @@ export default function CategoryHubScreen() {
     }
     const list = nearby.data.stores.filter((st) => (st.shopVertical ?? "").toLowerCase() === "food");
     setFoodStores(list);
-  }, [s]);
+  }, [catalogMainKey, la, ln, s]);
 
   useEffect(() => {
     void load();
@@ -137,7 +149,7 @@ export default function CategoryHubScreen() {
   const title = data?.mainCategory?.name ?? s.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   const catalogKey = data?.mainCategory?.key ?? s;
   const categories = data?.categories ?? [];
-  const showFoodGridAds = isFoodMainCategory(s, title);
+  const showFoodGridAds = isFoodMainCategory(catalogMainKey, title);
   const showFreshTheme = isFreshMainCategory(s, title);
   const foodCanvas = "#fbf3df";
   const freshCanvas = "#eaf7ff";

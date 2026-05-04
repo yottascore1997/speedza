@@ -42,6 +42,15 @@ type ProductRow = {
 type RailCat = { id: string; name: string; imageUrl?: string | null };
 type MainCat = { id: string; key: string; name: string };
 type TopCategory = MainCat & { isHome?: boolean };
+type FoodStoreRow = {
+  id: string;
+  name: string;
+  address: string;
+  distanceKm: number;
+  etaMin?: number;
+  imageUrl?: string | null;
+  matchedProducts?: number;
+};
 const SHOP_KEY = "__shop__";
 
 function normKey(k: string): string {
@@ -138,6 +147,7 @@ export default function CategorySubProductsScreen() {
   const viewCartBarWidth = Math.min(268, width - 44);
 
   const [products, setProducts] = useState<ProductRow[]>([]);
+  const [foodStores, setFoodStores] = useState<FoodStoreRow[]>([]);
   const [mains, setMains] = useState<MainCat[]>([]);
   const [railCats, setRailCats] = useState<RailCat[]>([]);
   const [loading, setLoading] = useState(true);
@@ -177,11 +187,24 @@ export default function CategorySubProductsScreen() {
       limit: "48",
       masterCategoryId: subId,
     });
+    if (foodMode) {
+      const foodRes = await api<{ stores: FoodStoreRow[] }>(
+        `/api/shop/food-subcategory-stores?${q.toString()}&subname=${encodeURIComponent(pageTitle)}`,
+      );
+      const fallback = await api<{ products: ProductRow[] }>(`/api/shop/category-quick?${q.toString()}`);
+      setLoading(false);
+      if (foodRes.ok && foodRes.data?.stores) setFoodStores(foodRes.data.stores);
+      else setFoodStores([]);
+      if (fallback.ok && fallback.data) setProducts(fallback.data.products);
+      else if (!foodRes.ok) setErr(foodRes.error || fallback.error || "Could not load");
+      return;
+    }
     const res = await api<{ products: ProductRow[] }>(`/api/shop/category-quick?${q.toString()}`);
     setLoading(false);
+    setFoodStores([]);
     if (res.ok && res.data) setProducts(res.data.products);
     else setErr(res.error || "Could not load");
-  }, [catalogKey, la, ln, subId]);
+  }, [catalogKey, foodMode, la, ln, pageTitle, subId]);
 
   useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
@@ -234,40 +257,6 @@ export default function CategorySubProductsScreen() {
   const firstThumbUri = cartFirstLine?.imageUrl
     ? resolveMediaUrl(cartFirstLine.imageUrl ?? undefined)
     : undefined;
-
-  const foodStores = useMemo(() => {
-    if (!foodMode) return [];
-    const map = new Map<
-      string,
-      {
-        id: string;
-        name: string;
-        distanceKm: number;
-        etaMin?: number;
-        cover?: string;
-        productCount: number;
-      }
-    >();
-    for (const p of products) {
-      const sid = p.store?.id;
-      if (!sid) continue;
-      const prev = map.get(sid);
-      if (prev) {
-        prev.productCount += 1;
-        if (!prev.cover && p.imageUrl) prev.cover = p.imageUrl;
-        continue;
-      }
-      map.set(sid, {
-        id: sid,
-        name: p.store.name,
-        distanceKm: Number(p.store.distanceKm) || 0,
-        etaMin: p.store.etaMin,
-        cover: p.imageUrl ?? undefined,
-        productCount: 1,
-      });
-    }
-    return Array.from(map.values()).sort((a, b) => a.distanceKm - b.distanceKm);
-  }, [foodMode, products]);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#f5f5f4" }}>
@@ -537,8 +526,9 @@ export default function CategorySubProductsScreen() {
                 ) : null
               }
               renderItem={({ item }) => {
-                const img = resolveMediaUrl(item.cover ?? undefined);
-                const rating = (4 + Math.min(0.9, (item.productCount % 9) * 0.1)).toFixed(1);
+                const img = resolveMediaUrl(item.imageUrl ?? undefined);
+                const productCount = Math.max(1, Number(item.matchedProducts) || 1);
+                const rating = (4 + Math.min(0.9, (productCount % 9) * 0.1)).toFixed(1);
                 const eta = typeof item.etaMin === "number" ? `${Math.max(10, Math.round(item.etaMin))} mins` : "25-35 mins";
                 return (
                   <Pressable
@@ -565,7 +555,7 @@ export default function CategorySubProductsScreen() {
                           paddingVertical: 4,
                         }}
                       >
-                        <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900" }}>{item.productCount}+ items at great prices</Text>
+                        <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900" }}>{productCount}+ items at great prices</Text>
                       </View>
                       <View
                         style={{
@@ -602,7 +592,7 @@ export default function CategorySubProductsScreen() {
                           <MaterialCommunityIcons name="star" size={11} color="#fff" />
                         </View>
                         <Text style={{ color: "#374151", fontSize: 14, fontWeight: "800" }}>
-                          {rating} <Text style={{ color: "#6b7280", fontWeight: "700" }}>({item.productCount * 12}+)</Text>
+                          {rating} <Text style={{ color: "#6b7280", fontWeight: "700" }}>({productCount * 12}+)</Text>
                         </Text>
                         <Text style={{ color: "#9ca3af", fontWeight: "700" }}> {" "}•{" "}</Text>
                         <Text style={{ color: "#374151", fontSize: 14, fontWeight: "700" }}>

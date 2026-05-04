@@ -52,6 +52,7 @@ type ProductHit = {
   imageUrl?: string | null;
   unitLabel?: string | null;
   stock?: number;
+  categoryName?: string;
   store?: { id: string; name: string };
 };
 
@@ -236,6 +237,15 @@ function numPrice(p: unknown): number {
   return Number(p) || 0;
 }
 
+function normText(v: string): string {
+  return v.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function isFashionMainCategory(mainKey: string): boolean {
+  const k = normMainKey(mainKey);
+  return k.includes("fashion") || k.includes("apparel") || k.includes("clothing");
+}
+
 function featuredTheme(mainKey: string) {
   const k = normMainKey(mainKey);
   if (k.includes("daily") || k.includes("essential") || k.includes("grocery")) {
@@ -280,6 +290,7 @@ export default function ShopHomeScreen() {
   const [offerProducts, setOfferProducts] = useState<ProductHit[]>([]);
   const [dealsNine, setDealsNine] = useState<ProductHit[]>([]);
   const [bestSelling, setBestSelling] = useState<ProductHit[]>([]);
+  const [fashionProducts, setFashionProducts] = useState<ProductHit[]>([]);
 
   const resolveCoords = useCallback(async () => {
     const token = await getToken();
@@ -302,7 +313,7 @@ export default function ShopHomeScreen() {
       setLat(la);
       setLng(ln);
 
-      const [nearby, tree, banner, productsA, productsE] = await Promise.all([
+      const [nearby, tree, banner, productsA, productsE, fashionQuick] = await Promise.all([
         api<{ stores: StoreItem[] }>(
           `/api/stores/nearby?lat=${la}&lng=${ln}&radiusKm=60&limit=30`,
         ),
@@ -310,6 +321,9 @@ export default function ShopHomeScreen() {
         api<{ imageUrl: string | null }>("/api/shop/todays-match-banner"),
         api<{ products: ProductHit[] }>(`/api/shop/search?q=${encodeURIComponent("a")}&limit=50`),
         api<{ products: ProductHit[] }>(`/api/shop/search?q=${encodeURIComponent("e")}&limit=50`),
+        api<{ products: ProductHit[] }>(
+          `/api/shop/category-quick?vertical=${encodeURIComponent("fashion")}&lat=${encodeURIComponent(String(la))}&lng=${encodeURIComponent(String(ln))}&radiusKm=60&limit=120`,
+        ),
       ]);
 
       if (nearby.ok && nearby.data) setStores(nearby.data.stores);
@@ -350,6 +364,15 @@ export default function ShopHomeScreen() {
         })
         .slice(0, 12);
       setBestSelling(best);
+      if (fashionQuick.ok && fashionQuick.data?.products) {
+        setFashionProducts(
+          fashionQuick.data.products.filter((p) =>
+            typeof p.stock === "number" ? p.stock > 0 : true,
+          ),
+        );
+      } else {
+        setFashionProducts([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -719,162 +742,49 @@ export default function ShopHomeScreen() {
         </View>
 
         <View style={{ marginTop: 6, marginBottom: 8 }}>
-          <View style={{ paddingHorizontal: SECTION_PAD, marginBottom: 18 }}>
-            <Text style={{ fontSize: 15, fontWeight: "900", color: theme.text, marginBottom: 8, letterSpacing: -0.3 }}>
-              Coupons & Offers
-            </Text>
-            <View
-              style={{
-                flexDirection: "row",
-                gap: COUPON_ROW_GAP,
-                paddingTop: 0,
-                paddingBottom: 2,
-                alignItems: "stretch",
-              }}
-            >
-              {[50, 100, 150, 200].map((off, idx) => {
-                const g = COUPON_GRADIENTS[idx % 4];
-                const borderC = COUPON_BORDER[idx % 4];
-                const accent = ["#1e3a8a", "#14532d", "#831843", "#334155"][idx % 4];
-                const accentMuted = ["#1d4ed8", "#166534", "#9d174d", "#475569"][idx % 4];
-                return (
-                <LinearGradient
-                  key={`coupon-${off}`}
-                  colors={[...g]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{
-                    width: couponTileW,
-                    borderRadius: 11,
-                    borderWidth: 1,
-                    borderColor: borderC,
-                    paddingVertical: 7,
-                    paddingHorizontal: 4,
-                    alignItems: "center",
-                    overflow: "hidden",
-                    ...subCardShadow,
-                  }}
-                >
-                  <Image
-                    source={require("../../assets/discount.png")}
-                    style={{ width: 22, height: 22, marginBottom: 3 }}
-                    contentFit="contain"
-                  />
-                  <Text
-                    style={{
-                      color: accent,
-                      fontSize: 7.5,
-                      fontWeight: "900",
-                      letterSpacing: 0.2,
-                      lineHeight: 10,
-                    }}
-                  >
-                    FLAT
-                  </Text>
-                  <Text
-                    style={{
-                      color: accentMuted,
-                      fontSize: couponTileW < 72 ? 11 : 12,
-                      lineHeight: couponTileW < 72 ? 14 : 15,
-                      fontWeight: "900",
-                      marginTop: 2,
-                      textAlign: "center",
-                    }}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.75}
-                  >
-                    ₹{off}
-                    <Text style={{ color: accent, fontSize: couponTileW < 72 ? 8 : 9, fontWeight: "900" }}> OFF</Text>
-                  </Text>
-                  <View
-                    style={{
-                      marginTop: 4,
-                      borderRadius: 999,
-                      backgroundColor: "#0a0a0a",
-                      borderWidth: 1,
-                      borderColor: "rgba(255,255,255,0.12)",
-                      paddingHorizontal: 4,
-                      paddingVertical: 3,
-                      alignSelf: "stretch",
-                    }}
-                  >
-                    <Text
-                      style={{ color: "#ffffff", fontSize: 8, fontWeight: "800", lineHeight: 11, textAlign: "center" }}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.7}
-                    >
-                      above ₹{idx === 0 ? 59 : idx === 1 ? 119 : idx === 2 ? 179 : 239}
-                    </Text>
-                  </View>
-                </LinearGradient>
-                );
-              })}
-            </View>
-
-            <ScrollView
-              horizontal
-              style={{ marginTop: 8 }}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{
-                gap: 6,
-                paddingTop: 0,
-                paddingBottom: 0,
-                alignItems: "center",
-              }}
-            >
-              {offerProducts.slice(0, 4).map((p, i) => {
+          <View style={{ paddingHorizontal: SECTION_PAD, marginBottom: 16 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginTop: 0 }}>
+              {bestSelling.slice(0, 8).map((p) => {
+                const img = resolveMediaUrl(p.imageUrl ?? undefined);
                 const price = numPrice(p.price);
                 const mrp = numPrice(p.mrp);
-                const save = Math.max(0, Math.round(mrp - price));
                 return (
                   <Pressable
-                    key={`offer-${p.id}`}
+                    key={`best-${p.id}`}
                     onPress={() => router.push(`/product/${p.id}` as Href)}
                     style={{
-                      width: 188,
+                      width: 150,
                       borderRadius: 12,
                       borderWidth: 1,
-                      borderColor: "#e2e8f0",
-                      backgroundColor: "#f8fafc",
-                      paddingVertical: 6,
-                      paddingHorizontal: 8,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 6,
+                      borderColor: "#e8eef5",
+                      backgroundColor: theme.bgElevated,
+                      overflow: "hidden",
                       ...subCardShadow,
                     }}
                   >
-                      <View
-                        style={{
-                          width: 26,
-                          height: 26,
-                          borderRadius: 8,
-                          backgroundColor: "#eff6ff",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          borderWidth: 1,
-                          borderColor: "#dbeafe",
-                        }}
-                      >
-                        <MaterialCommunityIcons name={i % 2 === 0 ? "wallet-giftcard" : "credit-card-outline"} size={14} color="#1d4ed8" />
-                      </View>
-                      <View style={{ flex: 1, paddingVertical: 0 }}>
-                        <Text numberOfLines={2} style={{ color: "#0f172a", fontWeight: "900", fontSize: 10.5, lineHeight: 13 }}>
-                          Flat ₹{save} off on orders above ₹{Math.max(99, Math.round(price))}
-                        </Text>
-                        <Text numberOfLines={1} style={{ color: "#334155", fontWeight: "700", fontSize: 8.5, marginTop: 1, lineHeight: 11 }}>
-                          Use code: {i % 2 === 0 ? "TRYSPEEDZA" : "SPEEDZAFAST"}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
+                    <View style={{ height: 96, backgroundColor: "#f8fafc", borderBottomWidth: 1, borderBottomColor: "#f1f5f9" }}>
+                      {img ? <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : null}
+                    </View>
+                    <View style={{ padding: 7 }}>
+                      <Text numberOfLines={2} style={{ fontSize: 12, fontWeight: "800", color: theme.text, minHeight: 30 }}>
+                        {p.name}
+                      </Text>
+                      <ProductPriceOfferRow
+                        compact
+                        layout="premiumGrid"
+                        sellingPrice={price}
+                        mrp={mrp}
+                        discountPercent={p.discountPercent}
+                        style={{ marginTop: 4 }}
+                      />
+                    </View>
+                  </Pressable>
+                );
+              })}
             </ScrollView>
           </View>
 
-          <View style={{ paddingHorizontal: SECTION_PAD, marginBottom: 14, marginTop: 4, alignItems: "center" }}>
+          <View style={{ paddingHorizontal: 0, marginBottom: 14, marginTop: 4, alignItems: "center" }}>
             {/* Wider than section inset — extra bleed vs coupons row so heading uses more horizontal space */}
             <View
               style={{
@@ -1073,54 +983,12 @@ export default function ShopHomeScreen() {
             </ScrollView>
           </View>
 
-          <View style={{ paddingHorizontal: SECTION_PAD, marginBottom: 16 }}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginTop: 0 }}>
-              {bestSelling.slice(0, 8).map((p) => {
-                const img = resolveMediaUrl(p.imageUrl ?? undefined);
-                const price = numPrice(p.price);
-                const mrp = numPrice(p.mrp);
-                return (
-                  <Pressable
-                    key={`best-${p.id}`}
-                    onPress={() => router.push(`/product/${p.id}` as Href)}
-                    style={{
-                      width: 150,
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      borderColor: "#e8eef5",
-                      backgroundColor: theme.bgElevated,
-                      overflow: "hidden",
-                      ...subCardShadow,
-                    }}
-                  >
-                    <View style={{ height: 96, backgroundColor: "#f8fafc", borderBottomWidth: 1, borderBottomColor: "#f1f5f9" }}>
-                      {img ? <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : null}
-                    </View>
-                    <View style={{ padding: 7 }}>
-                      <Text numberOfLines={2} style={{ fontSize: 12, fontWeight: "800", color: theme.text, minHeight: 30 }}>
-                        {p.name}
-                      </Text>
-                      <ProductPriceOfferRow
-                        compact
-                        layout="premiumGrid"
-                        sellingPrice={price}
-                        mrp={mrp}
-                        discountPercent={p.discountPercent}
-                        style={{ marginTop: 4 }}
-                      />
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-
           <Text
             style={{
-              fontSize: 17,
+              fontSize: 18,
               fontWeight: "900",
               color: theme.text,
-              marginBottom: 14,
+              marginBottom: 10,
               letterSpacing: -0.2,
               paddingHorizontal: SECTION_PAD,
             }}
@@ -1154,7 +1022,7 @@ export default function ShopHomeScreen() {
                     style={{
                       borderRadius: 12,
                       overflow: "hidden",
-                      aspectRatio: 0.88,
+                      aspectRatio: 1.02,
                       backgroundColor: theme.slateLine,
                     }}
                   >
@@ -1173,15 +1041,15 @@ export default function ShopHomeScreen() {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        paddingTop: 18,
-                        paddingHorizontal: 7,
-                        paddingBottom: 6,
+                        paddingTop: 14,
+                        paddingHorizontal: 6,
+                        paddingBottom: 5,
                       }}
                     >
-                      <Text style={{ color: "#fff", fontSize: 10.5, fontWeight: "900" }} numberOfLines={2}>
+                      <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900" }} numberOfLines={2}>
                         {m.name}
                       </Text>
-                      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 9, fontWeight: "700", marginTop: 1 }}>
+                      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 9.5, fontWeight: "700", marginTop: 1 }}>
                         {subLabel}
                       </Text>
                     </LinearGradient>
@@ -1193,6 +1061,130 @@ export default function ShopHomeScreen() {
 
           {mains.map((m) => {
             const k = normMainKey(m.key);
+            if (isFashionMainCategory(m.key)) {
+              const cards = m.subcategories.slice(0, 4).map((sub) => {
+                const cname = normText(sub.name);
+                const hits = fashionProducts.filter((p) => normText(p.categoryName ?? "") === cname);
+                const min = hits
+                  .map((p) => numPrice(p.price))
+                  .filter((n) => n > 0)
+                  .sort((a, b) => a - b)[0];
+                const img = hits.find((p) => p.imageUrl?.trim())?.imageUrl ?? (sub.imageUrl?.trim() ? resolveMediaUrl(sub.imageUrl) : null);
+                return {
+                  sub,
+                  startsAt: min ? Math.round(min) : null,
+                  imageUrl: img,
+                };
+              });
+              const hero = (() => {
+                const priced = fashionProducts
+                  .map((p) => ({ ...p, p: numPrice(p.price) }))
+                  .filter((p) => p.p > 0)
+                  .sort((a, b) => a.p - b.p);
+                const pick = priced[0] ?? null;
+                if (!pick) return null;
+                return { imageUrl: pick.imageUrl ?? null, price: Math.round(pick.p) };
+              })();
+
+              return (
+                <View key={`${m.id}-fashionfest`} style={{ marginBottom: 22, marginHorizontal: SECTION_PAD }}>
+                  <View
+                    style={{
+                      borderRadius: 24,
+                      backgroundColor: "#5b21b6",
+                      padding: 10,
+                    }}
+                  >
+                    <View style={{ borderRadius: 16, backgroundColor: "#ede9fe", padding: 10 }}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text
+                            style={{
+                              alignSelf: "flex-start",
+                              backgroundColor: "#e11d74",
+                              color: "#fff",
+                              fontWeight: "900",
+                              fontSize: 11,
+                              paddingHorizontal: 10,
+                              paddingVertical: 5,
+                              borderRadius: 8,
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            Summer Edit
+                          </Text>
+                          <Text style={{ marginTop: 6, color: "#0f766e", fontSize: 16, fontWeight: "900", textTransform: "uppercase" }}>
+                            Up to 85% off
+                          </Text>
+                          <Text style={{ marginTop: 2, color: "#0f766e", fontSize: 36, fontWeight: "900", lineHeight: 40 }}>
+                            FASHION FEST
+                          </Text>
+                        </View>
+                        <View style={{ flexDirection: "row", gap: 6, marginLeft: 8 }}>
+                          {cards
+                            .map((x) => x.imageUrl)
+                            .filter((v): v is string => Boolean(v))
+                            .slice(0, 2)
+                            .map((src, i) => (
+                              <View
+                                key={`${src}-${i}`}
+                                style={{
+                                  width: 68,
+                                  height: 92,
+                                  borderRadius: 10,
+                                  borderWidth: 3,
+                                  borderColor: "#fff",
+                                  overflow: "hidden",
+                                  transform: [{ rotate: i === 0 ? "-8deg" : "8deg" }],
+                                  backgroundColor: "#fde68a",
+                                }}
+                              >
+                                <Image source={{ uri: src }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+                              </View>
+                            ))}
+                        </View>
+                      </View>
+
+                      <View style={{ marginTop: 10, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+                          {[0, 1, 2, 3].map((idx) => {
+                            const row = cards[idx];
+                            if (!row) return null;
+                            return (
+                              <Pressable
+                                key={row.sub.id}
+                                onPress={() => openSubcategory(m.key, row.sub)}
+                                style={{
+                                  width: "49%",
+                                  borderRadius: 14,
+                                  backgroundColor: "#fff",
+                                  borderWidth: 1,
+                                  borderColor: "#e5e7eb",
+                                  overflow: "hidden",
+                                  marginBottom: 8,
+                                }}
+                              >
+                                <Text numberOfLines={1} style={{ paddingHorizontal: 10, paddingTop: 8, paddingBottom: 6, fontSize: 16, fontWeight: "900", color: "#292524" }}>
+                                  {row.sub.name} & More
+                                </Text>
+                                <View style={{ height: 74, backgroundColor: "#f3f4f6" }}>
+                                  {row.imageUrl ? (
+                                    <Image source={{ uri: row.imageUrl }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+                                  ) : null}
+                                </View>
+                                <View style={{ backgroundColor: "#0f766e", paddingHorizontal: 10, paddingVertical: 5 }}>
+                                  <Text style={{ color: "#fff", fontWeight: "900", fontSize: 14 }}>
+                                    Starting @ ₹{row.startsAt ?? 99}
+                                  </Text>
+                                </View>
+                              </Pressable>
+                            );
+                          })}
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              );
+            }
             const featured =
               k.includes("daily") ||
               k.includes("essential") ||
@@ -1420,6 +1412,161 @@ export default function ShopHomeScreen() {
               </View>
             );
           })}
+
+          <View style={{ paddingHorizontal: SECTION_PAD, marginBottom: 18 }}>
+            <Text style={{ fontSize: 15, fontWeight: "900", color: theme.text, marginBottom: 8, letterSpacing: -0.3 }}>
+              Coupons & Offers
+            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                gap: COUPON_ROW_GAP,
+                paddingTop: 0,
+                paddingBottom: 2,
+                alignItems: "stretch",
+              }}
+            >
+              {[50, 100, 150, 200].map((off, idx) => {
+                const g = COUPON_GRADIENTS[idx % 4];
+                const borderC = COUPON_BORDER[idx % 4];
+                const accent = ["#1e3a8a", "#14532d", "#831843", "#334155"][idx % 4];
+                const accentMuted = ["#1d4ed8", "#166534", "#9d174d", "#475569"][idx % 4];
+                return (
+                <LinearGradient
+                  key={`coupon-${off}`}
+                  colors={[...g]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    width: couponTileW,
+                    borderRadius: 11,
+                    borderWidth: 1,
+                    borderColor: borderC,
+                    paddingVertical: 7,
+                    paddingHorizontal: 4,
+                    alignItems: "center",
+                    overflow: "hidden",
+                    ...subCardShadow,
+                  }}
+                >
+                  <Image
+                    source={require("../../assets/discount.png")}
+                    style={{ width: 22, height: 22, marginBottom: 3 }}
+                    contentFit="contain"
+                  />
+                  <Text
+                    style={{
+                      color: accent,
+                      fontSize: 7.5,
+                      fontWeight: "900",
+                      letterSpacing: 0.2,
+                      lineHeight: 10,
+                    }}
+                  >
+                    FLAT
+                  </Text>
+                  <Text
+                    style={{
+                      color: accentMuted,
+                      fontSize: couponTileW < 72 ? 11 : 12,
+                      lineHeight: couponTileW < 72 ? 14 : 15,
+                      fontWeight: "900",
+                      marginTop: 2,
+                      textAlign: "center",
+                    }}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.75}
+                  >
+                    ₹{off}
+                    <Text style={{ color: accent, fontSize: couponTileW < 72 ? 8 : 9, fontWeight: "900" }}> OFF</Text>
+                  </Text>
+                  <View
+                    style={{
+                      marginTop: 4,
+                      borderRadius: 999,
+                      backgroundColor: "#0a0a0a",
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.12)",
+                      paddingHorizontal: 4,
+                      paddingVertical: 3,
+                      alignSelf: "stretch",
+                    }}
+                  >
+                    <Text
+                      style={{ color: "#ffffff", fontSize: 8, fontWeight: "800", lineHeight: 11, textAlign: "center" }}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.7}
+                    >
+                      above ₹{idx === 0 ? 59 : idx === 1 ? 119 : idx === 2 ? 179 : 239}
+                    </Text>
+                  </View>
+                </LinearGradient>
+                );
+              })}
+            </View>
+
+            <ScrollView
+              horizontal
+              style={{ marginTop: 8 }}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                gap: 6,
+                paddingTop: 0,
+                paddingBottom: 0,
+                alignItems: "center",
+              }}
+            >
+              {offerProducts.slice(0, 4).map((p, i) => {
+                const price = numPrice(p.price);
+                const mrp = numPrice(p.mrp);
+                const save = Math.max(0, Math.round(mrp - price));
+                return (
+                  <Pressable
+                    key={`offer-${p.id}`}
+                    onPress={() => router.push(`/product/${p.id}` as Href)}
+                    style={{
+                      width: 188,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: "#e2e8f0",
+                      backgroundColor: "#f8fafc",
+                      paddingVertical: 6,
+                      paddingHorizontal: 8,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                      ...subCardShadow,
+                    }}
+                  >
+                      <View
+                        style={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: 8,
+                          backgroundColor: "#eff6ff",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderWidth: 1,
+                          borderColor: "#dbeafe",
+                        }}
+                      >
+                        <MaterialCommunityIcons name={i % 2 === 0 ? "wallet-giftcard" : "credit-card-outline"} size={14} color="#1d4ed8" />
+                      </View>
+                      <View style={{ flex: 1, paddingVertical: 0 }}>
+                        <Text numberOfLines={2} style={{ color: "#0f172a", fontWeight: "900", fontSize: 10.5, lineHeight: 13 }}>
+                          Flat ₹{save} off on orders above ₹{Math.max(99, Math.round(price))}
+                        </Text>
+                        <Text numberOfLines={1} style={{ color: "#334155", fontWeight: "700", fontSize: 8.5, marginTop: 1, lineHeight: 11 }}>
+                          Use code: {i % 2 === 0 ? "TRYSPEEDZA" : "SPEEDZAFAST"}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+            </ScrollView>
+          </View>
         </View>
 
         {err ? (
@@ -1457,8 +1604,9 @@ export default function ShopHomeScreen() {
               end={{ x: 1, y: 1 }}
               style={{
                 borderRadius: 14,
-                paddingVertical: 12,
+                paddingVertical: 16,
                 paddingHorizontal: 14,
+                minHeight: 88,
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "space-between",

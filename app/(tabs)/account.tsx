@@ -315,58 +315,6 @@ export default function AccountScreen() {
     listTitle: { fontSize: 15, fontWeight: "600" as const, color: Z.ink },
     listSub: { fontSize: 13, fontWeight: "500" as const, color: Z.muted, marginTop: 2 },
     quickLabel: { fontSize: 12, fontWeight: "600" as const, color: Z.inkSoft, textAlign: "center" as const, marginTop: 10, lineHeight: 15 },
-    walletTitle: { fontSize: 15, fontWeight: "700" as const, color: Z.ink, letterSpacing: -0.2 },
-    balanceLead: { fontSize: 13, fontWeight: "500" as const, color: Z.muted },
-    balanceAmt: { fontSize: 15, fontWeight: "700" as const, color: Z.ink },
-    btnOutline: { fontSize: 13, fontWeight: "700" as const, color: Z.brand },
-  };
-
-  const quickCard = (opts: {
-    icon: keyof typeof MaterialCommunityIcons.glyphMap;
-    label: string;
-    onPress: () => void;
-    tone: "brand" | "slate";
-  }) => {
-    const bg = opts.tone === "brand" ? Z.brandSoft : "#f8fafc";
-    const border = opts.tone === "brand" ? "#dbeafe" : Z.line;
-    const iconC = opts.tone === "brand" ? Z.brand : Z.inkSoft;
-    return (
-      <Pressable
-        key={opts.label}
-        onPress={opts.onPress}
-        android_ripple={{ color: "rgba(37,99,235,0.12)" }}
-        style={({ pressed }) => ({
-          flex: 1,
-          minHeight: 100,
-          backgroundColor: bg,
-          borderRadius: 14,
-          borderWidth: 1,
-          borderColor: border,
-          alignItems: "center",
-          justifyContent: "center",
-          paddingVertical: 14,
-          paddingHorizontal: 6,
-          opacity: pressed ? 0.92 : 1,
-          ...cardLift,
-        })}
-      >
-        <View
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 14,
-            backgroundColor: opts.tone === "brand" ? "rgba(37,99,235,0.12)" : "rgba(15,23,42,0.06)",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <MaterialCommunityIcons name={opts.icon} size={24} color={iconC} />
-        </View>
-        <Text style={type.quickLabel} numberOfLines={2}>
-          {opts.label}
-        </Text>
-      </Pressable>
-    );
   };
 
   const infoRow = (opts: {
@@ -492,82 +440,6 @@ export default function AccountScreen() {
           </View>
         </LinearGradient>
 
-        <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
-          {quickCard({
-            icon: "shopping-outline",
-            label: "Your Orders",
-            onPress: () => router.push("/orders"),
-            tone: "brand",
-          })}
-          {quickCard({
-            icon: "message-text-outline",
-            label: "Help & Support",
-            onPress: () => router.push("/help"),
-            tone: "slate",
-          })}
-        </View>
-
-        <View
-          style={{
-            marginTop: 12,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: Z.walletBorder,
-            overflow: "hidden",
-            ...cardLift,
-          }}
-        >
-          <LinearGradient colors={[Z.walletFrom, Z.walletTo]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingHorizontal: 16, paddingVertical: 14 }}>
-            <Pressable
-              onPress={() => Alert.alert("Speedza Cash", "Wallet and gift cards coming soon.")}
-              android_ripple={{ color: "rgba(37,99,235,0.08)" }}
-              style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <View
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 12,
-                    backgroundColor: "rgba(37,99,235,0.1)",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <MaterialCommunityIcons name="wallet-outline" size={22} color={Z.brand} />
-                </View>
-                <Text style={[type.walletTitle, { flex: 1 }]}>Speedza Cash & Gift Card</Text>
-                <View style={{ backgroundColor: Z.newGreen, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                  <Text style={{ fontSize: 9, fontWeight: "700", color: "#fff" }}>NEW</Text>
-                </View>
-                <MaterialCommunityIcons name="chevron-right" size={20} color="#cbd5e1" />
-              </View>
-            </Pressable>
-            <View style={{ marginTop: 12, marginBottom: 12, height: StyleSheet.hairlineWidth, backgroundColor: Z.walletRule }} />
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-              <View>
-                <Text style={type.balanceLead}>Available balance</Text>
-                <Text style={[type.balanceAmt, { marginTop: 2 }]}>₹0</Text>
-              </View>
-              <Pressable
-                onPress={() => Alert.alert("Add balance", "Coming soon.")}
-                android_ripple={{ color: "rgba(37,99,235,0.12)" }}
-                style={({ pressed }) => ({
-                  paddingHorizontal: 14,
-                  paddingVertical: 10,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: Z.brand,
-                  backgroundColor: "rgba(255,255,255,0.9)",
-                  opacity: pressed ? 0.88 : 1,
-                })}
-              >
-                <Text style={type.btnOutline}>Add balance</Text>
-              </Pressable>
-            </View>
-          </LinearGradient>
-        </View>
-
         <Text style={[type.section, { marginTop: 22, marginBottom: 10 }]}>YOUR INFORMATION</Text>
         <View
           style={{
@@ -580,14 +452,14 @@ export default function AccountScreen() {
           }}
         >
           {infoRow({
-            icon: "cash-refund",
-            title: "Your Refunds",
+            icon: "shopping-outline",
+            title: "Your Orders",
             onPress: () => router.push("/orders"),
           })}
           {infoRow({
-            icon: "credit-card-outline",
-            title: "E-Gift Cards",
-            onPress: () => Alert.alert("E-Gift Cards", "Coming soon."),
+            icon: "cash-refund",
+            title: "Your Refunds",
+            onPress: () => router.push("/orders"),
           })}
           {infoRow({
             icon: "message-text-outline",
@@ -598,11 +470,6 @@ export default function AccountScreen() {
             icon: "map-marker-outline",
             title: "Saved Addresses",
             subtitle: address ? "1 address" : "Tap to add",
-            onPress: () => router.push("/profile"),
-          })}
-          {infoRow({
-            icon: "account-circle-outline",
-            title: "Profile",
             onPress: () => router.push("/profile"),
             isLast: true,
           })}
@@ -636,26 +503,111 @@ export default function AccountScreen() {
         <View
           style={{
             backgroundColor: Z.card,
-            borderRadius: 16,
+            borderRadius: 18,
             borderWidth: 1,
-            borderColor: Z.line,
-            padding: 14,
+            borderColor: "#dbe7ff",
+            padding: 15,
             marginBottom: 4,
             ...cardLift,
           }}
         >
-          <Text style={{ fontSize: 15, fontWeight: "700", color: Z.ink, letterSpacing: -0.2 }}>Upload grocery list photo</Text>
-          <Text style={{ marginTop: 4, fontSize: 13, color: Z.muted, fontWeight: "500", lineHeight: 18 }}>
-            Send one photo of your written list. Admin will process and deliver.
+          <LinearGradient
+            colors={["#f8fbff", "#eef4ff"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: "#d9e7ff",
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 12,
+                backgroundColor: "#dbeafe",
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 1,
+                borderColor: "#bfdbfe",
+              }}
+            >
+              <MaterialCommunityIcons name="clipboard-text-image-outline" size={22} color="#1d4ed8" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 16, fontWeight: "800", color: Z.ink, letterSpacing: -0.2 }}>
+                Upload Grocery List
+              </Text>
+              <Text style={{ marginTop: 1, fontSize: 12, color: "#475569", fontWeight: "600" }}>
+                Fast manual ordering by admin team
+              </Text>
+            </View>
+            <View
+              style={{
+                borderRadius: 999,
+                backgroundColor: "#16a34a",
+                paddingHorizontal: 8,
+                paddingVertical: 3,
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 10 }}>NEW</Text>
+            </View>
+          </LinearGradient>
+
+          <Text style={{ marginTop: 10, fontSize: 13, color: Z.muted, fontWeight: "500", lineHeight: 19 }}>
+            Jaldi order ke liye apni handwritten list ki photo upload karein.
           </Text>
+          <View
+            style={{
+              marginTop: 10,
+              borderWidth: 1,
+              borderColor: "#dbeafe",
+              backgroundColor: "#f8fbff",
+              borderRadius: 14,
+              paddingHorizontal: 10,
+              paddingVertical: 10,
+            }}
+          >
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+              {[
+                { id: "step1", icon: "numeric-1-circle", text: "Choose photo" },
+                { id: "step2", icon: "numeric-2-circle", text: "Add note" },
+                { id: "step3", icon: "numeric-3-circle", text: "Send admin" },
+              ].map((s) => (
+                <View
+                  key={s.id}
+                  style={{
+                    borderRadius: 999,
+                    backgroundColor: "#ffffff",
+                    borderWidth: 1,
+                    borderColor: "#dbeafe",
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <MaterialCommunityIcons name={s.icon as any} size={14} color="#2563eb" />
+                  <Text style={{ fontSize: 11, color: "#334155", fontWeight: "700" }}>{s.text}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
           <View style={{ marginTop: 12, flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
             <Pressable
               onPress={() => void pickListImage()}
               style={{
                 borderWidth: 1,
-                borderColor: Z.line,
+                borderColor: "#cbd5e1",
                 backgroundColor: "#f8fafc",
-                paddingHorizontal: 12,
+                paddingHorizontal: 13,
                 paddingVertical: 10,
                 borderRadius: 12,
                 flexDirection: "row",
@@ -663,17 +615,19 @@ export default function AccountScreen() {
                 gap: 6,
               }}
             >
-              <MaterialCommunityIcons name="image-plus" size={18} color={Z.inkSoft} />
-              <Text style={{ color: Z.inkSoft, fontWeight: "600", fontSize: 13 }}>{listImageUri ? "Change photo" : "Pick photo"}</Text>
+              <MaterialCommunityIcons name="image-plus" size={18} color="#334155" />
+              <Text style={{ color: Z.inkSoft, fontWeight: "700", fontSize: 13 }}>
+                {listImageUri ? "Change Photo" : "Choose Photo"}
+              </Text>
             </Pressable>
             <Pressable
               disabled={sendingList || !listImageUri}
               onPress={() => void submitListRequest()}
               style={{
                 borderWidth: 1,
-                borderColor: Z.brand,
-                backgroundColor: Z.brand,
-                paddingHorizontal: 14,
+                borderColor: "#1d4ed8",
+                backgroundColor: "#2563eb",
+                paddingHorizontal: 16,
                 paddingVertical: 10,
                 borderRadius: 12,
                 opacity: sendingList || !listImageUri ? 0.45 : 1,
@@ -683,16 +637,18 @@ export default function AccountScreen() {
               }}
             >
               <MaterialCommunityIcons name="send" size={18} color="#fff" />
-              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>{sendingList ? "Sending..." : "Send to admin"}</Text>
+              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>
+                {sendingList ? "Sending..." : "Send To Admin"}
+              </Text>
             </Pressable>
           </View>
           {listImageUri ? (
             <View
               style={{
-                marginTop: 8,
-                borderWidth: StyleSheet.hairlineWidth,
-                borderColor: Z.line,
-                borderRadius: 8,
+                marginTop: 10,
+                borderWidth: 1,
+                borderColor: "#dbeafe",
+                borderRadius: 12,
                 overflow: "hidden",
                 backgroundColor: "#fff",
               }}
@@ -703,7 +659,7 @@ export default function AccountScreen() {
           <TextInput
             value={listNote}
             onChangeText={setListNote}
-            placeholder="Optional note for admin"
+            placeholder="Optional note (eg: no onion, urgent delivery)"
             placeholderTextColor={Z.muted2}
             multiline
             style={{

@@ -174,5 +174,5 @@ export function CategoryFoodGridAd({ slot, onPress }: Props) {
 export function isFoodMainCategory(slug: string, displayName: string): boolean {
   const k = slug.toLowerCase().replace(/\s+/g, "-");
   const n = displayName.toLowerCase();
-  return k.includes("food") || n.includes("food");
+  return k.includes("food") || k.includes("meal") || k.includes("food-beverages") || n.includes("food");
 }
