@@ -83,42 +83,43 @@ export default function AccountScreen() {
     useCallback(() => {
       void (async () => {
         setLoading(true);
-        const token = await getToken();
-        const localUser = await getUser();
-        if (!token || !localUser) {
-          setUser(null);
+        try {
+          const token = await getToken();
+          const localUser = await getUser();
+          if (!token || !localUser) {
+            setUser(null);
+            setRoleErr(false);
+            return;
+          }
+
+          if (!ALLOWED_ROLES.has(localUser.role)) {
+            setUser(localUser);
+            setRoleErr(true);
+            return;
+          }
+
           setRoleErr(false);
-          setLoading(false);
-          return;
-        }
-
-        if (!ALLOWED_ROLES.has(localUser.role)) {
           setUser(localUser);
-          setRoleErr(true);
+          const [meRes, addrRes, listRes] = await Promise.all([
+            api<{ user: { imageUrl: string | null } }>("/api/user/me"),
+            api<{ address: AddressRow | null }>("/api/user/address"),
+            api<{ requests: ListRequestRow[] }>("/api/list-requests?limit=15"),
+          ]);
+          if (meRes.ok && meRes.data?.user) {
+            setImageUrl(resolveMediaUrl(meRes.data.user.imageUrl ?? undefined) ?? null);
+          } else {
+            setImageUrl(null);
+          }
+          if (addrRes.ok && addrRes.data?.address) {
+            setAddress(addrRes.data.address);
+          } else {
+            setAddress(null);
+          }
+          if (listRes.ok && listRes.data?.requests) setListRequests(listRes.data.requests);
+          else setListRequests([]);
+        } finally {
           setLoading(false);
-          return;
         }
-
-        setRoleErr(false);
-        setUser(localUser);
-        const [meRes, addrRes, listRes] = await Promise.all([
-          api<{ user: { imageUrl: string | null } }>("/api/user/me"),
-          api<{ address: AddressRow | null }>("/api/user/address"),
-          api<{ requests: ListRequestRow[] }>("/api/list-requests?limit=15"),
-        ]);
-        if (meRes.ok && meRes.data?.user) {
-          setImageUrl(resolveMediaUrl(meRes.data.user.imageUrl ?? undefined) ?? null);
-        } else {
-          setImageUrl(null);
-        }
-        if (addrRes.ok && addrRes.data?.address) {
-          setAddress(addrRes.data.address);
-        } else {
-          setAddress(null);
-        }
-        if (listRes.ok && listRes.data?.requests) setListRequests(listRes.data.requests);
-        else setListRequests([]);
-        setLoading(false);
       })();
     }, []),
   );

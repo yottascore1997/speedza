@@ -73,18 +73,21 @@ export default function SearchScreen() {
     }
     setErr(null);
     setLoading(true);
-    const res = await api<{ stores: StoreHit[]; products: ProductHit[] }>(
-      `/api/shop/search?q=${encodeURIComponent(query)}&limit=36`,
-    );
-    setLoading(false);
-    if (!res.ok || !res.data) {
-      setErr(res.error || "Search failed");
-      setStores([]);
-      setProducts([]);
-      return;
+    try {
+      const res = await api<{ stores: StoreHit[]; products: ProductHit[] }>(
+        `/api/shop/search?q=${encodeURIComponent(query)}&limit=36`,
+      );
+      if (!res.ok || !res.data) {
+        setErr(res.error || "Search failed");
+        setStores([]);
+        setProducts([]);
+        return;
+      }
+      setStores(res.data.stores ?? []);
+      setProducts(res.data.products ?? []);
+    } finally {
+      setLoading(false);
     }
-    setStores(res.data.stores ?? []);
-    setProducts(res.data.products ?? []);
   }, [trimmed]);
 
   useEffect(() => {

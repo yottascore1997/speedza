@@ -42,42 +42,44 @@ export default function ProfileScreen() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const token = await getToken();
-    const local = await getUser();
-    if (!token || !local) {
-      setUser(null);
+    try {
+      const token = await getToken();
+      const local = await getUser();
+      if (!token || !local) {
+        setUser(null);
+        return;
+      }
+      const [me, address] = await Promise.all([
+        api<{ user: { id: string; name: string; phone: string; role: string; imageUrl?: string | null } }>(
+          "/api/user/me",
+        ),
+        api<{ address: Address | null }>("/api/user/address"),
+      ]);
+      if (me.ok && me.data?.user) {
+        const nextUser: User = {
+          id: me.data.user.id,
+          name: me.data.user.name,
+          phone: me.data.user.phone,
+          role: me.data.user.role,
+        };
+        await setSession(token, nextUser);
+        setUser(nextUser);
+        setName(me.data.user.name || "");
+        setImageUrl(me.data.user.imageUrl ? resolveMediaUrl(me.data.user.imageUrl) ?? null : null);
+      } else {
+        setUser(local);
+        setName(local.name);
+      }
+      if (address.ok) {
+        setAddr(address.data?.address ?? null);
+        const a = address.data?.address ?? null;
+        setAddrText(a?.address ?? "");
+        setLat(a ? String(a.latitude) : "");
+        setLng(a ? String(a.longitude) : "");
+      }
+    } finally {
       setLoading(false);
-      return;
     }
-    const [me, address] = await Promise.all([
-      api<{ user: { id: string; name: string; phone: string; role: string; imageUrl?: string | null } }>(
-        "/api/user/me",
-      ),
-      api<{ address: Address | null }>("/api/user/address"),
-    ]);
-    if (me.ok && me.data?.user) {
-      const nextUser: User = {
-        id: me.data.user.id,
-        name: me.data.user.name,
-        phone: me.data.user.phone,
-        role: me.data.user.role,
-      };
-      await setSession(token, nextUser);
-      setUser(nextUser);
-      setName(me.data.user.name || "");
-      setImageUrl(me.data.user.imageUrl ? resolveMediaUrl(me.data.user.imageUrl) ?? null : null);
-    } else {
-      setUser(local);
-      setName(local.name);
-    }
-    if (address.ok) {
-      setAddr(address.data?.address ?? null);
-      const a = address.data?.address ?? null;
-      setAddrText(a?.address ?? "");
-      setLat(a ? String(a.latitude) : "");
-      setLng(a ? String(a.longitude) : "");
-    }
-    setLoading(false);
   }, []);
 
   useFocusEffect(

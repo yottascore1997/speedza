@@ -119,16 +119,19 @@ export default function OrdersScreen() {
   const [cancelLoading, setCancelLoading] = useState(false);
 
   const load = useCallback(async () => {
-    const token = await getToken();
-    if (!token) {
-      setOrders([]);
-      return;
+    try {
+      const token = await getToken();
+      if (!token) {
+        setOrders([]);
+        return;
+      }
+      setLoading(true);
+      const res = await api<{ orders: OrderRow[] }>("/api/orders/user?limit=40");
+      if (res.ok && res.data) setOrders(res.data.orders);
+      else if (!res.ok) Alert.alert("Error", res.error || "Failed");
+    } finally {
+      setLoading(false);
     }
-    setLoading(true);
-    const res = await api<{ orders: OrderRow[] }>("/api/orders/user?limit=40");
-    setLoading(false);
-    if (res.ok && res.data) setOrders(res.data.orders);
-    else if (!res.ok) Alert.alert("Error", res.error || "Failed");
   }, []);
 
   useFocusEffect(

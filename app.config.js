@@ -16,11 +16,15 @@ for (const [k, v] of Object.entries(process.env)) {
   }
 }
 
+/** Prefer EAS Secret `EXPO_PUBLIC_API_URL`. Optional second chance if only `EXPO_PUBLIC_PRODUCTION_API_URL` is set. */
 const apiUrlRaw =
   process.env.EXPO_PUBLIC_API_URL?.trim() ||
   process.env.NEXT_PUBLIC_API_URL?.trim() ||
+  process.env.EXPO_PUBLIC_PRODUCTION_API_URL?.trim() ||
   "";
 const apiUrl = apiUrlRaw.replace(/\/$/, "");
+const productionApiUrl =
+  (process.env.EXPO_PUBLIC_PRODUCTION_API_URL?.trim() || apiUrl || "").replace(/\/$/, "") || undefined;
 
 /** Set by `eas init` — required for EAS Build / Submit. */
 const EAS_PROJECT_ID = "6ef242a0-a55d-4205-bc66-2bc935463675";
@@ -29,7 +33,7 @@ module.exports = {
   expo: {
     name: "Speedza",
     slug: "speedza",
-    version: "1.0.6",
+    version: "1.0.8",
     orientation: "portrait",
     scheme: "speedza",
     userInterfaceStyle: "automatic",
@@ -37,7 +41,7 @@ module.exports = {
     icon: "./assets/icon.png",
     ios: {
       supportsTablet: true,
-      buildNumber: "13",
+      buildNumber: "15",
       bundleIdentifier: "in.speedza.app",
       infoPlist: {
         NSLocationWhenInUseUsageDescription: "We use your location to show nearby stores.",
@@ -45,7 +49,7 @@ module.exports = {
     },
     android: {
       package: "in.speedza.app",
-      versionCode: 13,
+      versionCode: 15,
       usesCleartextTraffic: true,
       adaptiveIcon: {
         foregroundImage: "./assets/icon.png",
@@ -81,6 +85,7 @@ module.exports = {
     extra: {
       ...extraFromEnv,
       ...(apiUrl ? { apiUrl } : {}),
+      ...(productionApiUrl ? { productionApiUrl } : {}),
       eas: {
         projectId: EAS_PROJECT_ID,
       },

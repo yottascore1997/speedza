@@ -14,12 +14,15 @@ export default function TabsLayout() {
 
   useEffect(() => {
     void (async () => {
-      const token = await getToken();
-      const user = await getUser();
-      const ok = Boolean(token && user);
-      setAuthed(ok);
-      setRole(user?.role ?? null);
-      setChecking(false);
+      try {
+        const token = await getToken();
+        const user = await getUser();
+        const ok = Boolean(token && user);
+        setAuthed(ok);
+        setRole(user?.role ?? null);
+      } finally {
+        setChecking(false);
+      }
     })();
   }, []);
 

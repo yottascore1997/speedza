@@ -189,21 +189,23 @@ export default function StoreOwnerScreen() {
 
   const loadStores = useCallback(async () => {
     setLoading(true);
-    const token = await getToken();
-    const user = await getUser();
-    if (!token || user?.role !== "STORE_OWNER") {
+    try {
+      const token = await getToken();
+      const user = await getUser();
+      if (!token || user?.role !== "STORE_OWNER") {
+        Alert.alert("Store owner only", "Please login with store owner account.", [
+          { text: "OK", onPress: () => router.replace("/login") },
+        ]);
+        return;
+      }
+      const mine = await api<{ stores: StoreMine[] }>("/api/stores/mine");
+      const list = mine.ok && mine.data?.stores ? mine.data.stores : [];
+      setStores(list);
+      setSelectedStoreId((prev) => prev ?? list[0]?.id ?? null);
+      setOwnerName(user?.name?.trim() || "");
+    } finally {
       setLoading(false);
-      Alert.alert("Store owner only", "Please login with store owner account.", [
-        { text: "OK", onPress: () => router.replace("/login") },
-      ]);
-      return;
     }
-    const mine = await api<{ stores: StoreMine[] }>("/api/stores/mine");
-    const list = mine.ok && mine.data?.stores ? mine.data.stores : [];
-    setStores(list);
-    setSelectedStoreId((prev) => prev ?? list[0]?.id ?? null);
-    setOwnerName(user?.name?.trim() || "");
-    setLoading(false);
   }, [router]);
 
   const loadStoreData = useCallback(async () => {
@@ -214,21 +216,24 @@ export default function StoreOwnerScreen() {
       return;
     }
     setLoading(true);
-    const [ordersRes, earnRes, catalogRes] = await Promise.all([
-      api<{ orders: StoreOrder[] }>(
-        `/api/orders/store?storeId=${encodeURIComponent(selectedStoreId)}&limit=40`,
-      ),
-      api<StoreEarnings>(
-        `/api/store/earnings?storeId=${encodeURIComponent(selectedStoreId)}`,
-      ),
-      api<StoreCatalog>(
-        `/api/store/catalog?storeId=${encodeURIComponent(selectedStoreId)}`,
-      ),
-    ]);
-    setOrders(ordersRes.ok && ordersRes.data?.orders ? ordersRes.data.orders : []);
-    setEarnings(earnRes.ok && earnRes.data ? earnRes.data : null);
-    setCatalog(catalogRes.ok && catalogRes.data?.store ? catalogRes.data.store : null);
-    setLoading(false);
+    try {
+      const [ordersRes, earnRes, catalogRes] = await Promise.all([
+        api<{ orders: StoreOrder[] }>(
+          `/api/orders/store?storeId=${encodeURIComponent(selectedStoreId)}&limit=40`,
+        ),
+        api<StoreEarnings>(
+          `/api/store/earnings?storeId=${encodeURIComponent(selectedStoreId)}`,
+        ),
+        api<StoreCatalog>(
+          `/api/store/catalog?storeId=${encodeURIComponent(selectedStoreId)}`,
+        ),
+      ]);
+      setOrders(ordersRes.ok && ordersRes.data?.orders ? ordersRes.data.orders : []);
+      setEarnings(earnRes.ok && earnRes.data ? earnRes.data : null);
+      setCatalog(catalogRes.ok && catalogRes.data?.store ? catalogRes.data.store : null);
+    } finally {
+      setLoading(false);
+    }
   }, [selectedStoreId]);
 
   useFocusEffect(

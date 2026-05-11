@@ -172,38 +172,39 @@ export default function CategorySubProductsScreen() {
   }, []);
 
   const load = useCallback(async () => {
-    if (!subId || subId === "all") {
-      setErr("Invalid subcategory");
-      setLoading(false);
-      return;
-    }
     setErr(null);
     setLoading(true);
-    const q = new URLSearchParams({
-      vertical: catalogKey,
-      lat: String(la),
-      lng: String(ln),
-      radiusKm: "60",
-      limit: "48",
-      masterCategoryId: subId,
-    });
-    if (foodMode) {
-      const foodRes = await api<{ stores: FoodStoreRow[] }>(
-        `/api/shop/food-subcategory-stores?${q.toString()}&subname=${encodeURIComponent(pageTitle)}`,
-      );
-      const fallback = await api<{ products: ProductRow[] }>(`/api/shop/category-quick?${q.toString()}`);
+    try {
+      if (!subId || subId === "all") {
+        setErr("Invalid subcategory");
+        return;
+      }
+      const q = new URLSearchParams({
+        vertical: catalogKey,
+        lat: String(la),
+        lng: String(ln),
+        radiusKm: "60",
+        limit: "48",
+        masterCategoryId: subId,
+      });
+      if (foodMode) {
+        const foodRes = await api<{ stores: FoodStoreRow[] }>(
+          `/api/shop/food-subcategory-stores?${q.toString()}&subname=${encodeURIComponent(pageTitle)}`,
+        );
+        const fallback = await api<{ products: ProductRow[] }>(`/api/shop/category-quick?${q.toString()}`);
+        if (foodRes.ok && foodRes.data?.stores) setFoodStores(foodRes.data.stores);
+        else setFoodStores([]);
+        if (fallback.ok && fallback.data) setProducts(fallback.data.products);
+        else if (!foodRes.ok) setErr(foodRes.error || fallback.error || "Could not load");
+        return;
+      }
+      const res = await api<{ products: ProductRow[] }>(`/api/shop/category-quick?${q.toString()}`);
+      setFoodStores([]);
+      if (res.ok && res.data) setProducts(res.data.products);
+      else setErr(res.error || "Could not load");
+    } finally {
       setLoading(false);
-      if (foodRes.ok && foodRes.data?.stores) setFoodStores(foodRes.data.stores);
-      else setFoodStores([]);
-      if (fallback.ok && fallback.data) setProducts(fallback.data.products);
-      else if (!foodRes.ok) setErr(foodRes.error || fallback.error || "Could not load");
-      return;
     }
-    const res = await api<{ products: ProductRow[] }>(`/api/shop/category-quick?${q.toString()}`);
-    setLoading(false);
-    setFoodStores([]);
-    if (res.ok && res.data) setProducts(res.data.products);
-    else setErr(res.error || "Could not load");
   }, [catalogKey, foodMode, la, ln, pageTitle, subId]);
 
   useLayoutEffect(() => {

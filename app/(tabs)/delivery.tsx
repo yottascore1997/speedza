@@ -50,13 +50,16 @@ export default function DeliveryScreen() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [res, e] = await Promise.all([
-      api<{ deliveries: Row[] }>("/api/delivery/mine"),
-      api<Earnings>("/api/delivery/earnings"),
-    ]);
-    setLoading(false);
-    if (res.ok && res.data) setRows(res.data.deliveries);
-    if (e.ok && e.data) setEarn(e.data);
+    try {
+      const [res, e] = await Promise.all([
+        api<{ deliveries: Row[] }>("/api/delivery/mine"),
+        api<Earnings>("/api/delivery/earnings"),
+      ]);
+      if (res.ok && res.data) setRows(res.data.deliveries);
+      if (e.ok && e.data) setEarn(e.data);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useFocusEffect(

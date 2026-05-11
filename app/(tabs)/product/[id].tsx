@@ -65,28 +65,30 @@ export default function ProductScreen() {
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    const res = await api<{ product: Product }>(`/api/shop/product/${encodeURIComponent(id)}`);
-    if (!res.ok || !res.data?.product) {
-      setLoading(false);
-      Alert.alert("Error", res.error || "Could not load product");
-      setP(null);
-      return;
-    }
-    const next = res.data.product;
-    setP(next);
+    try {
+      const res = await api<{ product: Product }>(`/api/shop/product/${encodeURIComponent(id)}`);
+      if (!res.ok || !res.data?.product) {
+        Alert.alert("Error", res.error || "Could not load product");
+        setP(null);
+        return;
+      }
+      const next = res.data.product;
+      setP(next);
 
-    const relatedRes = await api<{ store: { categories: StoreCategory[] } }>(`/api/stores/${next.store.id}`);
-    if (relatedRes.ok && relatedRes.data?.store) {
-      const products = relatedRes.data.store.categories
-        .flatMap((c) => c.products)
-        .filter((item) => item.id !== next.id && item.stock > 0);
-      setSimilar(products.slice(0, 6));
-      setAlsoLike(products.slice(6, 12));
-    } else {
-      setSimilar([]);
-      setAlsoLike([]);
+      const relatedRes = await api<{ store: { categories: StoreCategory[] } }>(`/api/stores/${next.store.id}`);
+      if (relatedRes.ok && relatedRes.data?.store) {
+        const products = relatedRes.data.store.categories
+          .flatMap((c) => c.products)
+          .filter((item) => item.id !== next.id && item.stock > 0);
+        setSimilar(products.slice(0, 6));
+        setAlsoLike(products.slice(6, 12));
+      } else {
+        setSimilar([]);
+        setAlsoLike([]);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [id]);
 
   useFocusEffect(
