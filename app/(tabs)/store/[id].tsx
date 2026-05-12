@@ -168,17 +168,22 @@ export default function StoreDetailScreen() {
   const load = useCallback(async () => {
     if (!id) return;
     const storeId = id;
-    const res = await api<{
-      store: { name: string; categories: Category[]; imageUrl?: string | null; address?: string | null };
-    }>(`/api/stores/${storeId}`);
-    if (latestStoreIdRef.current !== storeId) return;
-    if (res.ok && res.data) {
-      setName(res.data.store.name);
-      setStoreImage(res.data.store.imageUrl ?? null);
-      setStoreAddress(res.data.store.address?.trim() ?? "");
-      setCategories(res.data.store.categories);
-    } else Alert.alert("Error", res.error || "Failed");
-    setBooting(false);
+    try {
+      const res = await api<{
+        store: { name: string; categories: Category[]; imageUrl?: string | null; address?: string | null };
+      }>(`/api/stores/${storeId}`);
+      if (latestStoreIdRef.current !== storeId) return;
+      if (res.ok && res.data) {
+        setName(res.data.store.name);
+        setStoreImage(res.data.store.imageUrl ?? null);
+        setStoreAddress(res.data.store.address?.trim() ?? "");
+        setCategories(res.data.store.categories);
+      } else Alert.alert("Error", res.error || "Failed");
+    } finally {
+      if (latestStoreIdRef.current === storeId) {
+        setBooting(false);
+      }
+    }
   }, [id]);
 
   useEffect(() => {

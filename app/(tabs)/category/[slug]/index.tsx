@@ -117,29 +117,32 @@ export default function CategoryHubScreen() {
   const load = useCallback(async () => {
     setErr(null);
     setLoading(true);
-    const [tree, cat] = await Promise.all([
-      api<{ mains: ShopHeaderMain[] }>("/api/master/shop-tree"),
-      api<CatalogRes>(`/api/master/catalog?mainKey=${encodeURIComponent(catalogMainKey)}`),
-    ]);
-    setLoading(false);
-    if (tree.ok && tree.data?.mains) setMains(tree.data.mains);
-    if (cat.ok && cat.data) setData(cat.data);
-    else setErr(cat.error || "Could not load categories");
+    try {
+      const [tree, cat] = await Promise.all([
+        api<{ mains: ShopHeaderMain[] }>("/api/master/shop-tree"),
+        api<CatalogRes>(`/api/master/catalog?mainKey=${encodeURIComponent(catalogMainKey)}`),
+      ]);
+      if (tree.ok && tree.data?.mains) setMains(tree.data.mains);
+      if (cat.ok && cat.data) setData(cat.data);
+      else setErr(cat.error || "Could not load categories");
 
-    const shouldLoadFoodStores = isFoodMainCategory(catalogMainKey, cat.data?.mainCategory?.name ?? s);
-    if (!shouldLoadFoodStores) {
-      setFoodStores([]);
-      return;
+      const shouldLoadFoodStores = isFoodMainCategory(catalogMainKey, cat.data?.mainCategory?.name ?? s);
+      if (!shouldLoadFoodStores) {
+        setFoodStores([]);
+        return;
+      }
+      const nearby = await api<{ stores: StoreItem[] }>(
+        `/api/stores/nearby?lat=${encodeURIComponent(String(la))}&lng=${encodeURIComponent(String(ln))}&radiusKm=25&limit=30`,
+      );
+      if (!nearby.ok || !nearby.data?.stores) {
+        setFoodStores([]);
+        return;
+      }
+      const list = nearby.data.stores.filter((st) => (st.shopVertical ?? "").toLowerCase() === "food");
+      setFoodStores(list);
+    } finally {
+      setLoading(false);
     }
-    const nearby = await api<{ stores: StoreItem[] }>(
-      `/api/stores/nearby?lat=${encodeURIComponent(String(la))}&lng=${encodeURIComponent(String(ln))}&radiusKm=25&limit=30`,
-    );
-    if (!nearby.ok || !nearby.data?.stores) {
-      setFoodStores([]);
-      return;
-    }
-    const list = nearby.data.stores.filter((st) => (st.shopVertical ?? "").toLowerCase() === "food");
-    setFoodStores(list);
   }, [catalogMainKey, la, ln, s]);
 
   useEffect(() => {

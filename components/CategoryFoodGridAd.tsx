@@ -47,6 +47,7 @@ type Props = {
 
 export function CategoryFoodGridAd({ slot, onPress }: Props) {
   const line = LINES[(Math.max(1, slot) - 1) % LINES.length];
+  const gradientColors = (line.gradient ?? FOOD_AD_GRADIENT) as readonly [string, string, ...string[]];
 
   return (
     <Pressable
@@ -62,7 +63,7 @@ export function CategoryFoodGridAd({ slot, onPress }: Props) {
       }}
     >
       <LinearGradient
-        colors={[...(line.gradient ?? FOOD_AD_GRADIENT)]}
+        colors={gradientColors}
         locations={[0, 0.28, 0.58, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

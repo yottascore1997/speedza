@@ -6,14 +6,29 @@ const USER_KEY = "dlf_user";
 
 export function getApiBase(): string {
   const extra = Constants.expoConfig?.extra as
-    | { apiUrl?: string; EXPO_PUBLIC_API_URL?: string; NEXT_PUBLIC_API_URL?: string }
+    | {
+        apiUrl?: string;
+        productionApiUrl?: string;
+        EXPO_PUBLIC_API_URL?: string;
+        NEXT_PUBLIC_API_URL?: string;
+      }
     | undefined;
   const fromExtra =
     extra?.apiUrl || extra?.EXPO_PUBLIC_API_URL || extra?.NEXT_PUBLIC_API_URL;
   const fromEnv = process.env.EXPO_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_URL;
   const raw = fromExtra || fromEnv;
-  if (raw) return raw.replace(/\/$/, "");
-  return "http://localhost:3000";
+  let base = raw ? raw.replace(/\/$/, "") : "http://localhost:3000";
+
+  const prodOnly = extra?.productionApiUrl?.trim().replace(/\/$/, "");
+  if (
+    typeof __DEV__ !== "undefined" &&
+    !__DEV__ &&
+    prodOnly &&
+    /^(https?:\/\/)?(localhost|127\.0\.0\.1)(\b|\/|$)/i.test(base)
+  ) {
+    return prodOnly;
+  }
+  return base;
 }
 
 export type User = {

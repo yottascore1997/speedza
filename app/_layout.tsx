@@ -1,3 +1,4 @@
+import "react-native-gesture-handler";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Stack } from "expo-router";
@@ -8,17 +9,19 @@ import { theme } from "@/lib/theme";
 import { applyGlobalTypography, appFonts } from "@/lib/typography";
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     [appFonts.regular]: Lato_400Regular,
     [appFonts.medium]: Lato_700Bold,
     [appFonts.bold]: Lato_900Black,
   });
 
+  const fontsReady = fontsLoaded || fontError != null;
+
   useEffect(() => {
     if (fontsLoaded) applyGlobalTypography();
   }, [fontsLoaded]);
 
-  if (!fontsLoaded) {
+  if (!fontsReady) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.bg }}>
         <StatusBar style="dark" />

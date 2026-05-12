@@ -745,10 +745,10 @@ export function StoreOwnerCatalog({
               }}
             />
             <View style={{ width: 52, height: 52, borderRadius: 12, borderWidth: 1.5, borderColor: CAT.greenBorder, borderStyle: "dashed", alignItems: "center", justifyContent: "center", backgroundColor: CAT.greenSoft }}>
-              <MaterialCommunityIcons name="image-plus-outline" size={26} color={CAT.btnSolidDark} />
+              <MaterialCommunityIcons name="file-image-plus-outline" size={26} color={CAT.btnSolidDark} />
             </View>
             <View style={{ width: 52, height: 52, borderRadius: 12, borderWidth: 1.5, borderColor: CAT.greenBorder, borderStyle: "dashed", alignItems: "center", justifyContent: "center", backgroundColor: CAT.greenSoft }}>
-              <MaterialCommunityIcons name="image-plus-outline" size={26} color={CAT.btnSolidDark} />
+              <MaterialCommunityIcons name="file-image-plus-outline" size={26} color={CAT.btnSolidDark} />
             </View>
           </View>
           <Pressable onPress={() => void onCreateProduct()} disabled={saving} style={{ borderRadius: 14, overflow: "hidden", opacity: saving ? 0.65 : 1 }}>

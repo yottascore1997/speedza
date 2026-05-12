@@ -20,6 +20,7 @@ import { api, getApiBase, getToken } from "@/lib/api";
 import { theme } from "@/lib/theme";
 import { resolveMediaUrl } from "@/lib/assets";
 import { ShopMarketHeader } from "@/components/ShopMarketHeader";
+import { ProductPriceOfferRow } from "@/components/ProductPriceOfferRow";
 import { FREE_DELIVERY_MIN_SUBTOTAL } from "@/lib/free-delivery";
 
 const HEADER_SHOP_ACTIVE = "__shop__";
@@ -531,7 +532,7 @@ export default function ShopHomeScreen() {
           >
             {bannerUrl ? (
               <Image
-                source={{ uri: bannerUrl }}
+                source={{ uri: bannerUrl as string }}
                 style={{ width: "100%", height: "100%" }}
                 contentFit="cover"
                 cachePolicy="memory-disk"
