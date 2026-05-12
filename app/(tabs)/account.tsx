@@ -539,7 +539,7 @@ export default function AccountScreen() {
                 borderColor: "#bfdbfe",
               }}
             >
-              <MaterialCommunityIcons name="clipboard-text-image-outline" size={22} color="#1d4ed8" />
+              <MaterialCommunityIcons name="clipboard-text-outline" size={22} color="#1d4ed8" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 16, fontWeight: "800", color: Z.ink, letterSpacing: -0.2 }}>

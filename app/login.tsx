@@ -34,6 +34,11 @@ import {
 
 const LOGIN_BG = require("../public/images/loginbg.jpeg");
 
+// Temporary Play review login: keep this on while Firebase/SMS OTP is blocking review.
+// Set to false to restore the real Firebase phone OTP path below.
+const DEMO_APP_OTP_LOGIN = true;
+const DEMO_APP_OTP_CODE = "123456";
+
 async function registerPush() {
   try {
     const { status } = await Notifications.requestPermissionsAsync();
@@ -95,6 +100,13 @@ export default function LoginScreen() {
         Alert.alert("Invalid phone", "Please enter a valid 10-digit mobile number.");
         return;
       }
+      if (DEMO_APP_OTP_LOGIN) {
+        setConfirm(null);
+        setOtp("");
+        setStep(2);
+        Alert.alert("Demo OTP enabled", `Use ${DEMO_APP_OTP_CODE} to continue.`);
+        return;
+      }
       const digits = phone.replace(/\D/g, "");
       const e164 = digits.startsWith("91") ? `+${digits}` : `+91${digits}`;
       if (Platform.OS !== "web" && !nativeFirebaseCfg) {
@@ -140,38 +152,61 @@ export default function LoginScreen() {
   }
 
   async function verify() {
-    if (Platform.OS === "web" && !confirm) {
-      Alert.alert("Session expired", "Please request OTP again.");
-      setStep(1);
-      return;
+    const code = otp.replace(/\s/g, "");
+    if (!DEMO_APP_OTP_LOGIN) {
+      if (Platform.OS === "web" && !confirm) {
+        Alert.alert("Session expired", "Please request OTP again.");
+        setStep(1);
+        return;
+      }
+      if (Platform.OS !== "web" && !authBridgeRef.current) {
+        Alert.alert("Session expired", "Please request OTP again.");
+        setStep(1);
+        return;
+      }
     }
-    if (Platform.OS !== "web" && !authBridgeRef.current) {
-      Alert.alert("Session expired", "Please request OTP again.");
-      setStep(1);
+    if (!code) {
+      Alert.alert("OTP required", "Enter the code from SMS.");
       return;
     }
     setLoading(true);
     try {
-      let idToken: string;
-      if (Platform.OS === "web") {
-        const cred = await confirm!.confirm(otp.replace(/\s/g, ""));
-        idToken = await cred.user.getIdToken();
+      let res: {
+        ok: boolean;
+        data?: {
+          token: string;
+          needsProfile?: boolean;
+          user: { id: string; name: string; phone: string; role: string };
+        };
+        error?: string;
+        status: number;
+      };
+      if (DEMO_APP_OTP_LOGIN) {
+        res = await api<{
+          token: string;
+          needsProfile?: boolean;
+          user: { id: string; name: string; phone: string; role: string };
+        }>("/api/auth/verify-otp", {
+          method: "POST",
+          body: JSON.stringify({ phone, code }),
+        });
       } else {
-        const code = otp.replace(/\s/g, "");
-        if (!code) {
-          Alert.alert("OTP required", "Enter the code from SMS.");
-          return;
+        let idToken: string;
+        if (Platform.OS === "web") {
+          const cred = await confirm!.confirm(code);
+          idToken = await cred.user.getIdToken();
+        } else {
+          idToken = await authBridgeRef.current!.verifyOtp(code);
         }
-        idToken = await authBridgeRef.current!.verifyOtp(code);
+        res = await api<{
+          token: string;
+          needsProfile?: boolean;
+          user: { id: string; name: string; phone: string; role: string };
+        }>("/api/auth/firebase", {
+          method: "POST",
+          body: JSON.stringify({ idToken }),
+        });
       }
-      const res = await api<{
-        token: string;
-        needsProfile?: boolean;
-        user: { id: string; name: string; phone: string; role: string };
-      }>("/api/auth/firebase", {
-        method: "POST",
-        body: JSON.stringify({ idToken }),
-      });
       if (!res.ok || !res.data) {
         Alert.alert(
           res.status === 0 ? "Cannot reach server" : "Login failed",
@@ -324,12 +359,12 @@ export default function LoginScreen() {
           </>
         )}
 
-        {Platform.OS !== "web" && !nativeFirebaseCfg && step === 1 ? (
+        {!DEMO_APP_OTP_LOGIN && Platform.OS !== "web" && !nativeFirebaseCfg && step === 1 ? (
           <Text style={styles.configWarn}>
             Sign-in is not available on this build. Install an updated release or contact support.
           </Text>
         ) : null}
-        {Platform.OS !== "web" && nativeFirebaseCfg && !bridgeReady && step === 1 ? (
+        {!DEMO_APP_OTP_LOGIN && Platform.OS !== "web" && nativeFirebaseCfg && !bridgeReady && step === 1 ? (
           <Text style={styles.configWarn}>
             Initializing secure login... Please wait 2-3 seconds, then tap Send OTP.
           </Text>
@@ -346,7 +381,12 @@ export default function LoginScreen() {
               style={inputStyle}
             />
             <Pressable
-              disabled={loading || (Platform.OS !== "web" && (!nativeFirebaseCfg || !bridgeReady))}
+              disabled={
+                loading ||
+                (!DEMO_APP_OTP_LOGIN &&
+                  Platform.OS !== "web" &&
+                  (!nativeFirebaseCfg || !bridgeReady))
+              }
               onPress={() => void sendOtp()}
               style={({ pressed }) => [
                 styles.btnPrimary,
@@ -487,7 +527,11 @@ export default function LoginScreen() {
     ) : (
       <View style={{ paddingBottom: bottomPad }}>
         {cardInner}
-        <Text style={styles.footerNote}>Secured with Firebase phone verification</Text>
+        <Text style={styles.footerNote}>
+          {DEMO_APP_OTP_LOGIN
+            ? `Demo OTP enabled: ${DEMO_APP_OTP_CODE}`
+            : "Secured with Firebase phone verification"}
+        </Text>
       </View>
     );
 
@@ -503,7 +547,7 @@ export default function LoginScreen() {
             style: { position: "fixed", left: -9999, width: 1, height: 1, overflow: "hidden" },
           })
         : null}
-      {Platform.OS !== "web" && nativeFirebaseCfg ? (
+      {!DEMO_APP_OTP_LOGIN && Platform.OS !== "web" && nativeFirebaseCfg ? (
         <FirebasePhoneAuthWebView
           ref={authBridgeRef}
           firebaseConfig={nativeFirebaseCfg}
