@@ -2,14 +2,14 @@
   "expo": {
     "name": "Speedza",
     "slug": "speedza",
-    "version": "1.0.5",
+    "version": "1.0.7",
     "orientation": "portrait",
     "scheme": "speedza",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
     "ios": {
       "bundleIdentifier": "com.speedza.app",
-      "buildNumber": "12",
+      "buildNumber": "13",
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We use your location to show nearby stores."
@@ -17,7 +17,7 @@
     },
     "android": {
       "package": "com.speedza.app",
-      "versionCode": 12,
+      "versionCode": 13,
       "adaptiveIcon": {
         "backgroundColor": "#16a34a"
       },
