@@ -33,7 +33,7 @@ module.exports = {
   expo: {
     name: "Speedza",
     slug: "speedza",
-    version: "1.0.9",
+    version: "1.0.10",
     orientation: "portrait",
     scheme: "speedza",
     userInterfaceStyle: "automatic",
@@ -41,7 +41,7 @@ module.exports = {
     icon: "./assets/icon.png",
     ios: {
       supportsTablet: true,
-      buildNumber: "17",
+      buildNumber: "18",
       bundleIdentifier: "in.speedza.app",
       infoPlist: {
         NSLocationWhenInUseUsageDescription: "We use your location to show nearby stores.",
@@ -49,7 +49,7 @@ module.exports = {
     },
     android: {
       package: "in.speedza.app",
-      versionCode: 17,
+      versionCode: 18,
       usesCleartextTraffic: true,
       adaptiveIcon: {
         foregroundImage: "./assets/icon.png",

@@ -18,7 +18,6 @@ import { api } from "@/lib/api";
 import { theme } from "@/lib/theme";
 import { resolveMediaUrl } from "@/lib/assets";
 import { CartQtyStepper } from "@/components/CartQtyStepper";
-import { ProductPriceOfferRow } from "@/components/ProductPriceOfferRow";
 import { cartTotalQty, getCart, subscribeCart, type CartLine } from "@/lib/cart";
 
 const DEFAULT_LAT = 28.4595;
@@ -105,15 +104,9 @@ function railThumb(c: RailCat): string | undefined {
   return undefined;
 }
 
-/** Daily essentials vertical — hide seller name on tiles (Zepto-style). */
-function isDailyEssentialsContext(slug: string, catalogKey: string) {
-  const k = `${slug} ${catalogKey}`.toLowerCase();
-  return k.includes("daily-essential");
-}
-
 function isFoodContext(slug: string, catalogKey: string) {
   const k = `${slug} ${catalogKey}`.toLowerCase();
-  return k.includes("food") || k.includes("meal");
+  return k.includes("food") || k.includes("meal") || k.includes("snack");
 }
 
 export default function CategorySubProductsScreen() {
@@ -131,8 +124,6 @@ export default function CategorySubProductsScreen() {
   const { width } = useWindowDimensions();
   const gap = 8;
   const mainPad = 10;
-  const rightW = width - RAIL_W - RAIL_GAP;
-  const colW = (rightW - mainPad * 2 - gap) / 2;
 
   const slug = decodeURIComponent(Array.isArray(params.slug) ? params.slug[0] : params.slug || "grocery");
   const subIdRaw = Array.isArray(params.subId) ? params.subId[0] : params.subId || "";
@@ -142,7 +133,6 @@ export default function CategorySubProductsScreen() {
   const catalogKey = (params.catalogKey as string)?.trim() || slug;
   const subnameQ = (params.subname as string)?.trim() || "";
 
-  const hideStoreName = useMemo(() => isDailyEssentialsContext(slug, catalogKey), [slug, catalogKey]);
   const foodMode = useMemo(() => isFoodContext(slug, catalogKey), [slug, catalogKey]);
   const viewCartBarWidth = Math.min(268, width - 44);
 
@@ -183,7 +173,6 @@ export default function CategorySubProductsScreen() {
         vertical: catalogKey,
         lat: String(la),
         lng: String(ln),
-        radiusKm: "60",
         limit: "48",
         masterCategoryId: subId,
       });
@@ -595,10 +584,6 @@ export default function CategorySubProductsScreen() {
                         <Text style={{ color: "#374151", fontSize: 14, fontWeight: "800" }}>
                           {rating} <Text style={{ color: "#6b7280", fontWeight: "700" }}>({productCount * 12}+)</Text>
                         </Text>
-                        <Text style={{ color: "#9ca3af", fontWeight: "700" }}> {" "}•{" "}</Text>
-                        <Text style={{ color: "#374151", fontSize: 14, fontWeight: "700" }}>
-                          {(Number(item.distanceKm) || 0).toFixed(1)} km
-                        </Text>
                       </View>
                       <Text numberOfLines={1} style={{ marginTop: 5, color: "#6b7280", fontWeight: "700", fontSize: 13 }}>
                         Fast food, Chinese, Snacks
@@ -625,14 +610,13 @@ export default function CategorySubProductsScreen() {
             />
           ) : (
             <FlatList
-              key="product-grid-2-cols"
+              key="product-list-single-column"
               data={products}
               keyExtractor={(item) => item.id}
-              numColumns={2}
-              columnWrapperStyle={{ gap, paddingHorizontal: mainPad }}
               contentContainerStyle={{
                 paddingBottom: cartQty > 0 ? 100 + insets.bottom : 28 + insets.bottom,
                 paddingTop: 4,
+                paddingHorizontal: mainPad,
                 gap,
               }}
               refreshControl={
@@ -651,93 +635,149 @@ export default function CategorySubProductsScreen() {
                 const mrp = numPrice(item.mrp);
                 const stock = typeof item.stock === "number" && Number.isFinite(item.stock) ? item.stock : 999;
                 const inStock = stock > 0;
+                const showMrp = mrp > price;
+                const showDisc = typeof item.discountPercent === "number" && item.discountPercent > 0;
+                const savings = showMrp ? Math.max(0, mrp - price) : 0;
                 return (
-                  <View style={{ width: colW }}>
+                  <View style={{ width: "100%" }}>
                     <View
                       style={{
-                        backgroundColor: "#fff",
+                        flexDirection: "row",
+                        gap: 10,
+                        backgroundColor: "#fffdf8",
                         borderRadius: 16,
                         borderWidth: 1,
-                        borderColor: "#e7e5e4",
+                        borderColor: showDisc || showMrp ? "#fed7aa" : "#e7e5e4",
+                        padding: 11,
                         ...cardShadow,
                       }}
                     >
-                      <View
-                        style={{
-                          borderTopLeftRadius: 16,
-                          borderTopRightRadius: 16,
-                          overflow: "hidden",
-                          backgroundColor: "#fafaf9",
-                        }}
-                      >
-                        <Pressable onPress={() => router.push(`/product/${item.id}` as Href)}>
-                          <View style={{ aspectRatio: 1 }}>
-                            {img ? (
-                              <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
-                            ) : (
-                              <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                                <MaterialCommunityIcons name="image-outline" size={36} color={theme.textDim} />
-                              </View>
-                            )}
-                          </View>
+                      <View style={{ width: 96, alignItems: "center" }}>
+                        <Pressable
+                          onPress={() => router.push(`/product/${item.id}` as Href)}
+                          style={{
+                            width: 96,
+                            height: 92,
+                            borderRadius: 14,
+                            overflow: "hidden",
+                            backgroundColor: "#fff7ed",
+                            borderWidth: 1,
+                            borderColor: "#ffedd5",
+                          }}
+                        >
+                          {img ? (
+                            <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+                          ) : (
+                            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                              <MaterialCommunityIcons name="image-outline" size={32} color={theme.textDim} />
+                            </View>
+                          )}
                         </Pressable>
-                      </View>
-
-                      <Pressable onPress={() => router.push(`/product/${item.id}` as Href)} style={{ paddingHorizontal: 10, paddingTop: 10, paddingBottom: 4 }}>
-                        {item.unitLabel?.trim() ? (
+                        {showMrp ? (
                           <View
                             style={{
-                              alignSelf: "flex-start",
-                              marginBottom: 6,
-                              paddingHorizontal: 8,
-                              paddingVertical: 4,
-                              borderRadius: 6,
-                              backgroundColor: "#e0f2fe",
+                              marginTop: 5,
+                              width: "100%",
+                              borderRadius: 999,
+                              backgroundColor: "#ffedd5",
+                              paddingVertical: 3,
+                              paddingHorizontal: 5,
                             }}
                           >
-                            <Text style={{ fontSize: 11, fontWeight: "900", color: "#0369a1" }}>
-                              {item.unitLabel.trim()}
+                            <Text numberOfLines={1} style={{ textAlign: "center", fontSize: 9, fontWeight: "900", color: "#c2410c" }}>
+                              Save ₹{Math.round(savings * 100) / 100}
                             </Text>
                           </View>
                         ) : null}
-                        <Text numberOfLines={2} style={{ fontSize: 13, fontWeight: "900", color: "#0c0a09", lineHeight: 17 }}>
-                          {item.name}
-                        </Text>
-                        <ProductPriceOfferRow
-                          compact
-                          layout="premiumGrid"
-                          sellingPrice={price}
-                          mrp={mrp}
-                          discountPercent={item.discountPercent}
-                          style={{ marginTop: 6 }}
-                        />
-                      </Pressable>
-                      <View style={{ paddingHorizontal: 10, paddingBottom: 10, paddingTop: 2 }}>
-                        <CartQtyStepper
-                          compact
-                          addLabel="ADD"
-                          line={{
-                            productId: item.id,
-                            storeId: item.store.id,
-                            name: item.name,
-                            price,
-                            storeName: item.store.name,
-                            imageUrl: item.imageUrl ?? null,
-                            unitLabel: item.unitLabel ?? null,
-                            mrp: mrp > price ? mrp : undefined,
-                            discountPercent:
-                              typeof item.discountPercent === "number" && item.discountPercent > 0
-                                ? item.discountPercent
-                                : undefined,
-                          }}
-                          maxQty={stock}
-                          canAdd={inStock}
-                        />
-                        {!hideStoreName ? (
-                          <Text numberOfLines={1} style={{ fontSize: 10, fontWeight: "600", color: "#78716c", marginTop: 6 }}>
-                            {item.store.name}
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 0, minHeight: 104, justifyContent: "space-between" }}>
+                        <Pressable onPress={() => router.push(`/product/${item.id}` as Href)} style={{ gap: 4 }}>
+                          <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
+                            <Text
+                              numberOfLines={2}
+                              style={{
+                                flex: 1,
+                                minWidth: 0,
+                                fontSize: 13,
+                                fontWeight: "900",
+                                color: "#0c0a09",
+                                lineHeight: 17,
+                              }}
+                            >
+                              {item.name}
+                            </Text>
+                            {showDisc ? (
+                              <View
+                                style={{
+                                  borderRadius: 999,
+                                  backgroundColor: "#dcfce7",
+                                  paddingHorizontal: 7,
+                                  paddingVertical: 3,
+                                }}
+                              >
+                                <Text style={{ fontSize: 9, fontWeight: "900", color: "#15803d" }}>
+                                  {Math.round(item.discountPercent!)}% OFF
+                                </Text>
+                              </View>
+                            ) : null}
+                          </View>
+                          <Text numberOfLines={1} style={{ fontSize: 10, fontWeight: "800", color: "#92400e" }}>
+                            {item.unitLabel?.trim() || "Fast delivery"}
                           </Text>
-                        ) : null}
+                        </Pressable>
+
+                        <View style={{ gap: 6 }}>
+                          <View style={{ minWidth: 0 }}>
+                            <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
+                              <Text
+                                numberOfLines={1}
+                                style={{ fontSize: 15, fontWeight: "900", color: "#0f172a", lineHeight: 18, flexShrink: 0 }}
+                              >
+                                ₹{Math.round(price * 100) / 100}
+                              </Text>
+                              {showMrp ? (
+                                <Text
+                                  numberOfLines={1}
+                                  style={{
+                                    flexShrink: 1,
+                                    fontSize: 10,
+                                    fontWeight: "700",
+                                    color: "#78716c",
+                                    textDecorationLine: "line-through",
+                                  }}
+                                >
+                                  ₹{Math.round(mrp * 100) / 100}
+                                </Text>
+                              ) : null}
+                            </View>
+                          </View>
+                          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                            <View style={{ flex: 1 }} />
+                            <View style={{ width: 72 }}>
+                              <CartQtyStepper
+                                dense
+                                addLabel="ADD"
+                                line={{
+                                  productId: item.id,
+                                  storeId: item.store.id,
+                                  name: item.name,
+                                  price,
+                                  storeName: item.store.name,
+                                  imageUrl: item.imageUrl ?? null,
+                                  unitLabel: item.unitLabel ?? null,
+                                  mrp: mrp > price ? mrp : undefined,
+                                  discountPercent:
+                                    typeof item.discountPercent === "number" && item.discountPercent > 0
+                                      ? item.discountPercent
+                                      : undefined,
+                                }}
+                                maxQty={stock}
+                                canAdd={inStock}
+                              />
+                            </View>
+                          </View>
+                        </View>
                       </View>
                     </View>
                   </View>

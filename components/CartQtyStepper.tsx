@@ -24,6 +24,8 @@ type Props = {
   addLabel?: string;
   addBgColor?: string;
   addBorderColor?: string;
+  /** White pill, green border & label (category grid / Blinkit-style ADD) */
+  addOutline?: boolean;
 };
 
 export function CartQtyStepper({
@@ -35,6 +37,7 @@ export function CartQtyStepper({
   addLabel = "Add to cart",
   addBgColor = ADD_GREEN,
   addBorderColor = "#14532d",
+  addOutline = false,
 }: Props) {
   const [qty, setQty] = useState(0);
   const inflight = useRef(false);
@@ -144,19 +147,19 @@ export function CartQtyStepper({
         ) : (
           <View
             style={{
-              backgroundColor: addBgColor,
+              backgroundColor: addOutline ? "#ffffff" : addBgColor,
               paddingVertical: addPadV,
               paddingHorizontal: addPadH,
               alignItems: "center",
               justifyContent: "center",
               minHeight: addMinH,
-              borderWidth: 1,
-              borderColor: addBorderColor,
+              borderWidth: addOutline ? 1.5 : 1,
+              borderColor: addOutline ? addBgColor : addBorderColor,
             }}
           >
             <Text
               style={{
-                color: "#fff",
+                color: addOutline ? addBgColor : "#fff",
                 textAlign: "center",
                 fontWeight: "900",
                 fontSize: dense ? 11 : compact ? 12 : 16,
