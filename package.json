@@ -1,11 +1,9 @@
 {
   "name": "app",
   "main": "expo-router/entry",
-<<<<<<< HEAD
   "version": "1.0.7",
-=======
-  "version": "1.0.9",
->>>>>>> c6f8a64f667e659b332af7b090d1ed7d3bd33cd3
+
+  "version": "1.0.9" ,
   "private": true,
   "scripts": {
     "start": "expo start",
