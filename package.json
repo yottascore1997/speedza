@@ -3,13 +3,16 @@
   "main": "expo-router/entry",
   "version": "1.0.10",
   "private": true,
+  "engines": {
+    "node": ">=18.14.0"
+  },
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build:android": "eas build --platform android --profile production",
-    "build:android:apk": "eas build --platform android --profile preview"
+    "build:android": "node ./scripts/run-eas-build.cjs production android",
+    "build:android:apk": "node ./scripts/run-eas-build.cjs preview android"
   },
   "dependencies": {
     "@expo/metro-runtime": "5.0.5",
