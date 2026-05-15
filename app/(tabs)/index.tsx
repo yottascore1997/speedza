@@ -19,6 +19,7 @@ import { theme } from "@/lib/theme";
 import { resolveMediaUrl } from "@/lib/assets";
 import { ShopMarketHeader } from "@/components/ShopMarketHeader";
 import { CartQtyStepper, type CartQtyStepperLine } from "@/components/CartQtyStepper";
+import { QuickGroceryOrderSection } from "@/components/QuickGroceryOrderSection";
 
 const HEADER_SHOP_ACTIVE = "__shop__";
 
@@ -987,6 +988,23 @@ export default function ShopHomeScreen() {
             </Pressable>
           </LinearGradient>
 
+          <View
+            style={{
+              marginHorizontal: SECTION_PAD,
+              marginBottom: 14,
+              borderRadius: 22,
+              overflow: "hidden",
+              ...bannerCardShadow,
+            }}
+          >
+            <Image
+              source={require("../../assets/dairybg2.png")}
+              style={{ width: "100%", aspectRatio: 2 }}
+              contentFit="cover"
+              contentPosition="left center"
+            />
+          </View>
+
           <View style={{ marginBottom: 14 }}>
             <View style={{ paddingHorizontal: SECTION_PAD, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <Text style={{ color: "#0f172a", fontSize: 18, fontWeight: "900", letterSpacing: -0.2 }}>
@@ -1175,6 +1193,10 @@ export default function ShopHomeScreen() {
               })}
             </ScrollView>
             )}
+          </View>
+
+          <View style={{ marginHorizontal: SECTION_PAD, marginBottom: 18 }}>
+            <QuickGroceryOrderSection variant="home" />
           </View>
 
           <View style={{ marginHorizontal: SECTION_PAD, marginBottom: 14, borderRadius: 18, backgroundColor: "#ffffff", borderWidth: 1, borderColor: "#eef2f6", paddingVertical: 13, flexDirection: "row" }}>

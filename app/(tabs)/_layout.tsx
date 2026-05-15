@@ -1,12 +1,21 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Image, View } from "react-native";
+import { ActivityIndicator, Image, Platform, View } from "react-native";
 import { Redirect, Tabs } from "expo-router";
+import { PlatformPressable } from "@react-navigation/elements";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "@/lib/theme";
 import { clearSession, getToken, getUser } from "@/lib/api";
 import { cartTotalQty, getCart, subscribeCart } from "@/lib/cart";
 
+const TAB_ICON_SIZE = 28;
+const TAB_CENTER_SIZE = 60;
+
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+  const tabBottomPad = Math.max(insets.bottom, Platform.OS === "ios" ? 12 : 10);
+  const tabBarHeight = 58 + tabBottomPad;
+
   const [checking, setChecking] = useState(true);
   const [authed, setAuthed] = useState(false);
   const [role, setRole] = useState<string | null>(null);
@@ -88,12 +97,25 @@ export default function TabsLayout() {
           shadowOffset: { width: 0, height: -6 },
           shadowOpacity: 0.08,
           shadowRadius: 16,
-          paddingTop: 8,
-          paddingBottom: 8,
-          height: 70,
+          paddingTop: 10,
+          paddingBottom: tabBottomPad,
+          height: tabBarHeight,
+          minHeight: tabBarHeight,
         },
-        tabBarLabelStyle: { fontWeight: "800", fontSize: 10, marginTop: -1 },
-        tabBarIconStyle: { marginBottom: -2 },
+        tabBarItemStyle: {
+          paddingVertical: 6,
+          minHeight: 52,
+        },
+        tabBarLabelStyle: { fontWeight: "800", fontSize: 11, marginTop: 2, marginBottom: 2 },
+        tabBarIconStyle: { marginBottom: 0 },
+        tabBarButton: (props) => (
+          <PlatformPressable
+            {...props}
+            android_ripple={{ color: "rgba(47,158,68,0.14)", borderless: false }}
+            hitSlop={{ top: 18, bottom: 14, left: 10, right: 10 }}
+            style={[props.style, { flex: 1, justifyContent: "center", alignItems: "center" }]}
+          />
+        ),
         tabBarBadgeStyle: {
           backgroundColor: theme.badgeRed,
           color: "#ffffff",
@@ -107,8 +129,8 @@ export default function TabsLayout() {
         options={{
           headerShown: false,
           title: "Home",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="home-outline" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="home-outline" size={TAB_ICON_SIZE} color={color} />
           ),
         }}
       />
@@ -117,8 +139,8 @@ export default function TabsLayout() {
         options={{
           title: "Categories",
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="view-grid-outline" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="view-grid-outline" size={TAB_ICON_SIZE} color={color} />
           ),
         }}
       />
@@ -128,16 +150,16 @@ export default function TabsLayout() {
           title: "Quick\nReorder",
           headerShown: false,
           tabBarBadge: badge,
-          tabBarIcon: ({ size }) => (
+          tabBarIcon: () => (
             <View
               style={{
-                width: 54,
-                height: 54,
-                borderRadius: 27,
+                width: TAB_CENTER_SIZE,
+                height: TAB_CENTER_SIZE,
+                borderRadius: TAB_CENTER_SIZE / 2,
                 backgroundColor: "#2f9e44",
                 alignItems: "center",
                 justifyContent: "center",
-                marginTop: -22,
+                marginTop: -18,
                 borderWidth: 4,
                 borderColor: "#ffffff",
                 elevation: 8,
@@ -149,7 +171,7 @@ export default function TabsLayout() {
             >
               <Image
                 source={require("../../assets/trolley.png")}
-                style={{ width: size + 8, height: size + 8 }}
+                style={{ width: 34, height: 34 }}
                 resizeMode="contain"
               />
             </View>
@@ -161,8 +183,8 @@ export default function TabsLayout() {
         options={{
           title: "Orders",
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="clipboard-text-outline" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="clipboard-text-outline" size={TAB_ICON_SIZE} color={color} />
           ),
         }}
       />
@@ -171,8 +193,8 @@ export default function TabsLayout() {
         options={{
           title: "Profile",
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="account-outline" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="account-outline" size={TAB_ICON_SIZE} color={color} />
           ),
         }}
       />

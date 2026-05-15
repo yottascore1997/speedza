@@ -41,7 +41,7 @@ module.exports = {
     icon: "./assets/icon.png",
     ios: {
       supportsTablet: true,
-      buildNumber: "18",
+      buildNumber: "20",
       bundleIdentifier: "in.speedza.app",
       infoPlist: {
         NSLocationWhenInUseUsageDescription: "We use your location to show nearby stores.",
@@ -49,7 +49,7 @@ module.exports = {
     },
     android: {
       package: "in.speedza.app",
-      versionCode: 18,
+      versionCode: 20,
       usesCleartextTraffic: true,
       adaptiveIcon: {
         foregroundImage: "./assets/icon.png",

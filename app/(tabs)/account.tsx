@@ -6,7 +6,6 @@ import {
   Alert,
   ScrollView,
   ActivityIndicator,
-  TextInput,
   Platform,
   StyleSheet,
 } from "react-native";
@@ -15,23 +14,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import * as ImagePicker from "expo-image-picker";
-import { api, clearSession, getApiBase, getToken, getUser, type User } from "@/lib/api";
+import { api, clearSession, getToken, getUser, type User } from "@/lib/api";
 import { resolveMediaUrl } from "@/lib/assets";
+import { QuickGroceryOrderSection, type QuickGroceryListRequest } from "@/components/QuickGroceryOrderSection";
 type AddressRow = {
   label?: string | null;
   address: string;
 };
-type ListRequestRow = {
-  id: string;
-  imageUrl: string;
-  note: string;
-  address: string;
-  status: string;
-  adminNote?: string;
-  createdAt: string;
-};
-
 const ALLOWED_ROLES = new Set(["CUSTOMER", "STORE_OWNER", "DELIVERY", "ADMIN"]);
 
 /** Profile — calm slate + Speedza brand blue (theme) */
@@ -72,10 +61,7 @@ export default function AccountScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [address, setAddress] = useState<AddressRow | null>(null);
-  const [listRequests, setListRequests] = useState<ListRequestRow[]>([]);
-  const [listImageUri, setListImageUri] = useState<string | null>(null);
-  const [listNote, setListNote] = useState("");
-  const [sendingList, setSendingList] = useState(false);
+  const [listRequests, setListRequests] = useState<QuickGroceryListRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [roleErr, setRoleErr] = useState(false);
 
@@ -103,7 +89,7 @@ export default function AccountScreen() {
           const [meRes, addrRes, listRes] = await Promise.all([
             api<{ user: { imageUrl: string | null } }>("/api/user/me"),
             api<{ address: AddressRow | null }>("/api/user/address"),
-            api<{ requests: ListRequestRow[] }>("/api/list-requests?limit=15"),
+            api<{ requests: QuickGroceryListRequest[] }>("/api/list-requests?limit=15"),
           ]);
           if (meRes.ok && meRes.data?.user) {
             setImageUrl(resolveMediaUrl(meRes.data.user.imageUrl ?? undefined) ?? null);
@@ -128,69 +114,6 @@ export default function AccountScreen() {
     await clearSession();
     setUser(null);
   }
-  async function pickListImage() {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert("Permission needed", "Allow gallery access to upload list photo.");
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.85,
-    });
-    if (!result.canceled && result.assets?.[0]?.uri) {
-      setListImageUri(result.assets[0].uri);
-    }
-  }
-  async function submitListRequest() {
-    if (!listImageUri) {
-      Alert.alert("Photo required", "Please pick a list photo first.");
-      return;
-    }
-    const token = await getToken();
-    if (!token) {
-      Alert.alert("Sign in required", "Please login again.");
-      return;
-    }
-    setSendingList(true);
-    try {
-      const fd = new FormData();
-      const ext = listImageUri.split(".").pop()?.toLowerCase() || "jpg";
-      const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
-      fd.append("file", { uri: listImageUri, name: `list.${ext}`, type: mime } as any);
-      const up = await fetch(`${getApiBase()}/api/list-requests/upload-image`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd as any,
-      });
-      const upJson = (await up.json().catch(() => null)) as { imageUrl?: string; error?: string } | null;
-      if (!up.ok || !upJson?.imageUrl) {
-        Alert.alert("Upload failed", upJson?.error || "Could not upload list image");
-        return;
-      }
-      const createRes = await api<{ request: ListRequestRow }>("/api/list-requests", {
-        method: "POST",
-        body: JSON.stringify({
-          imageUrl: upJson.imageUrl,
-          note: listNote.trim(),
-          address: address?.address ?? "",
-        }),
-      });
-      if (!createRes.ok) {
-        Alert.alert("Request failed", createRes.error || "Could not create list request");
-        return;
-      }
-      setListImageUri(null);
-      setListNote("");
-      const mine = await api<{ requests: ListRequestRow[] }>("/api/list-requests?limit=15");
-      if (mine.ok && mine.data?.requests) setListRequests(mine.data.requests);
-      Alert.alert("Submitted", "Admin received your grocery list. You can track status below.");
-    } finally {
-      setSendingList(false);
-    }
-  }
-
   const profileCanvas = Z.canvas;
   const backBtnLift =
     Platform.OS === "ios"
@@ -501,211 +424,11 @@ export default function AccountScreen() {
 
         <Text style={[type.section, { marginTop: 22, marginBottom: 10 }]}>MORE FROM SPEEDZA</Text>
 
-        <View
-          style={{
-            backgroundColor: Z.card,
-            borderRadius: 18,
-            borderWidth: 1,
-            borderColor: "#dbe7ff",
-            padding: 15,
-            marginBottom: 4,
-            ...cardLift,
-          }}
-        >
-          <LinearGradient
-            colors={["#f8fbff", "#eef4ff"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{
-              borderRadius: 14,
-              borderWidth: 1,
-              borderColor: "#d9e7ff",
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                backgroundColor: "#dbeafe",
-                alignItems: "center",
-                justifyContent: "center",
-                borderWidth: 1,
-                borderColor: "#bfdbfe",
-              }}
-            >
-              <MaterialCommunityIcons name="clipboard-text-outline" size={22} color="#1d4ed8" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 16, fontWeight: "800", color: Z.ink, letterSpacing: -0.2 }}>
-                Upload Grocery List
-              </Text>
-              <Text style={{ marginTop: 1, fontSize: 12, color: "#475569", fontWeight: "600" }}>
-                Fast manual ordering by admin team
-              </Text>
-            </View>
-            <View
-              style={{
-                borderRadius: 999,
-                backgroundColor: "#16a34a",
-                paddingHorizontal: 8,
-                paddingVertical: 3,
-              }}
-            >
-              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 10 }}>NEW</Text>
-            </View>
-          </LinearGradient>
-
-          <Text style={{ marginTop: 10, fontSize: 13, color: Z.muted, fontWeight: "500", lineHeight: 19 }}>
-            Jaldi order ke liye apni handwritten list ki photo upload karein.
-          </Text>
-          <View
-            style={{
-              marginTop: 10,
-              borderWidth: 1,
-              borderColor: "#dbeafe",
-              backgroundColor: "#f8fbff",
-              borderRadius: 14,
-              paddingHorizontal: 10,
-              paddingVertical: 10,
-            }}
-          >
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-              {[
-                { id: "step1", icon: "numeric-1-circle", text: "Choose photo" },
-                { id: "step2", icon: "numeric-2-circle", text: "Add note" },
-                { id: "step3", icon: "numeric-3-circle", text: "Send admin" },
-              ].map((s) => (
-                <View
-                  key={s.id}
-                  style={{
-                    borderRadius: 999,
-                    backgroundColor: "#ffffff",
-                    borderWidth: 1,
-                    borderColor: "#dbeafe",
-                    paddingHorizontal: 10,
-                    paddingVertical: 6,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
-                >
-                  <MaterialCommunityIcons name={s.icon as any} size={14} color="#2563eb" />
-                  <Text style={{ fontSize: 11, color: "#334155", fontWeight: "700" }}>{s.text}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-          <View style={{ marginTop: 12, flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-            <Pressable
-              onPress={() => void pickListImage()}
-              style={{
-                borderWidth: 1,
-                borderColor: "#cbd5e1",
-                backgroundColor: "#f8fafc",
-                paddingHorizontal: 13,
-                paddingVertical: 10,
-                borderRadius: 12,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <MaterialCommunityIcons name="image-plus" size={18} color="#334155" />
-              <Text style={{ color: Z.inkSoft, fontWeight: "700", fontSize: 13 }}>
-                {listImageUri ? "Change Photo" : "Choose Photo"}
-              </Text>
-            </Pressable>
-            <Pressable
-              disabled={sendingList || !listImageUri}
-              onPress={() => void submitListRequest()}
-              style={{
-                borderWidth: 1,
-                borderColor: "#1d4ed8",
-                backgroundColor: "#2563eb",
-                paddingHorizontal: 16,
-                paddingVertical: 10,
-                borderRadius: 12,
-                opacity: sendingList || !listImageUri ? 0.45 : 1,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <MaterialCommunityIcons name="send" size={18} color="#fff" />
-              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>
-                {sendingList ? "Sending..." : "Send To Admin"}
-              </Text>
-            </Pressable>
-          </View>
-          {listImageUri ? (
-            <View
-              style={{
-                marginTop: 10,
-                borderWidth: 1,
-                borderColor: "#dbeafe",
-                borderRadius: 12,
-                overflow: "hidden",
-                backgroundColor: "#fff",
-              }}
-            >
-              <Image source={{ uri: listImageUri }} style={{ width: "100%", height: 120 }} contentFit="cover" />
-            </View>
-          ) : null}
-          <TextInput
-            value={listNote}
-            onChangeText={setListNote}
-            placeholder="Optional note (eg: no onion, urgent delivery)"
-            placeholderTextColor={Z.muted2}
-            multiline
-            style={{
-              marginTop: 8,
-              borderWidth: StyleSheet.hairlineWidth,
-              borderColor: Z.line,
-              backgroundColor: "#fafafa",
-              paddingHorizontal: 10,
-              paddingVertical: 8,
-              borderRadius: 8,
-              color: Z.ink,
-              minHeight: 40,
-              fontSize: 13,
-              textAlignVertical: "top",
-            }}
-          />
-          {listRequests.length > 0 ? (
-            <View style={{ marginTop: 10, gap: 6 }}>
-              <Text style={{ fontSize: 11, color: Z.muted2, fontWeight: "600", letterSpacing: 0.3 }}>LIST REQUEST STATUS</Text>
-              {listRequests.slice(0, 4).map((r) => (
-                <View
-                  key={r.id}
-                  style={{
-                    borderWidth: StyleSheet.hairlineWidth,
-                    borderColor: Z.line,
-                    backgroundColor: "#fafafa",
-                    borderRadius: 8,
-                    padding: 8,
-                  }}
-                >
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <Text style={{ color: Z.ink, fontWeight: "600", fontSize: 12 }}>#{r.id.slice(0, 8)}</Text>
-                    <Text style={{ color: Z.brand, fontWeight: "600", fontSize: 11 }}>{r.status.replace(/_/g, " ")}</Text>
-                  </View>
-                  <Text style={{ marginTop: 4, color: Z.muted, fontSize: 11, fontWeight: "400" }}>
-                    {new Date(r.createdAt).toLocaleString()}
-                  </Text>
-                  {r.adminNote ? (
-                    <Text style={{ marginTop: 3, color: Z.ink, fontSize: 11, fontWeight: "500" }}>Admin: {r.adminNote}</Text>
-                  ) : null}
-                </View>
-              ))}
-            </View>
-          ) : null}
-        </View>
+        <QuickGroceryOrderSection
+          variant="profile"
+          listRequests={listRequests}
+          onRequestsUpdated={setListRequests}
+        />
 
         {user?.role === "DELIVERY" ? (
           <Pressable

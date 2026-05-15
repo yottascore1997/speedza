@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -21,34 +21,63 @@ import { ShopMarketHeader, type ShopHeaderMain } from "@/components/ShopMarketHe
 import { CategoryPromoBanner } from "@/components/CategoryPromoBanner";
 import { CategoryFoodGridAd, isFoodMainCategory } from "@/components/CategoryFoodGridAd";
 import { GroceryListUploadCard } from "@/components/GroceryListUploadCard";
+import { DairyCategoryStorefront } from "@/components/DairyCategoryStorefront";
+import { DailyEssentialsStorefront } from "@/components/DailyEssentialsStorefront";
+import { HouseholdCategoryStorefront } from "@/components/HouseholdCategoryStorefront";
 
 const DEFAULT_LAT = 28.4595;
 const DEFAULT_LNG = 77.0266;
 
-/** Purple food hero — fixed appetizing decor (pizza, burger, cold drink). */
+/** Food category hero slider (`speedza/assets/`) */
+const FOOD_BANNER_SLIDES = [
+  require("../../../../assets/food1.png"),
+  require("../../../../assets/food2.png"),
+] as const;
+
+const FOOD_BANNER_H = 192;
+
+/** Secondary food promo cards still use a catalog preview image when available */
 const FOOD_BANNER_DECOR = {
   pizza: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=700&h=500&fit=crop&q=85",
-  burger: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=700&h=500&fit=crop&q=85",
-  coldDrink:
-    "https://images.unsplash.com/photo-1626115649875-369d62c6281b?w=600&h=600&fit=crop&q=85",
 } as const;
 
-/** Premium personal care hub — spa / skincare aesthetic */
-const PERSONAL_CARE_HERO = {
-  primary:
-    "https://images.unsplash.com/photo-1556228578-0d85b1a2d891?auto=format&fit=crop&w=900&h=720&q=88",
-} as const;
-
-const personalCareHeroShadow = Platform.select({
+const foodBannerCardShadow = Platform.select({
   ios: {
-    shadowColor: "#4a044e",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.22,
-    shadowRadius: 24,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
   },
-  android: { elevation: 8 },
+  android: { elevation: 4 },
   default: {},
 });
+
+/** Category hero banners (`speedza/assets/`) */
+const CATEGORY_BG_BANNERS = {
+  personal: require("../../../../assets/personalbg.png"),
+  household: require("../../../../assets/homebg.png"),
+  beverages: require("../../../../assets/beverages.png"),
+} as const;
+
+function CategoryAssetBanner({ source, bannerW }: { source: number; bannerW: number }) {
+  return (
+    <View
+      style={{
+        marginBottom: 16,
+        borderRadius: 22,
+        overflow: "hidden",
+        ...foodBannerCardShadow,
+      }}
+    >
+      <Image
+        source={source}
+        style={{ width: bannerW, aspectRatio: 2 }}
+        contentFit="cover"
+        contentPosition="left center"
+      />
+    </View>
+  );
+}
 
 const personalCareTileShadow = Platform.select({
   ios: {
@@ -148,6 +177,11 @@ function firstPreviewImage(c: CatalogCategory): string | undefined {
   return hit?.imageUrl ? resolveMediaUrl(hit.imageUrl) ?? undefined : undefined;
 }
 
+function isDairyMainCategory(slug: string, catalogKey: string, title: string): boolean {
+  const k = `${slug} ${catalogKey} ${title}`.toLowerCase().replace(/_/g, "-");
+  return k.includes("dairy");
+}
+
 function isFreshMainCategory(slug: string, title: string): boolean {
   const k = `${slug} ${title}`.toLowerCase().replace(/_/g, "-");
   return (
@@ -163,8 +197,8 @@ function isFashionMainCategory(slug: string, title: string): boolean {
   return k.includes("fashion") || k.includes("apparel") || k.includes("clothing");
 }
 
-function isPersonalCareMainCategory(slug: string, title: string): boolean {
-  const k = `${slug} ${title}`.toLowerCase().replace(/_/g, "-");
+function isPersonalCareMainCategory(slug: string, catalogKey: string, title: string): boolean {
+  const k = `${slug} ${catalogKey} ${title}`.toLowerCase().replace(/_/g, "-");
   return (
     k.includes("personal-care") ||
     k.includes("personal care") ||
@@ -180,8 +214,31 @@ function isPersonalCareMainCategory(slug: string, title: string): boolean {
   );
 }
 
+function isHouseholdMainCategory(slug: string, catalogKey: string, title: string): boolean {
+  const k = `${slug} ${catalogKey} ${title}`.toLowerCase().replace(/_/g, "-");
+  return k.includes("household") || k.includes("cleaning") || k.includes("home-care");
+}
+
+function isBeveragesMainCategory(slug: string, catalogKey: string, title: string): boolean {
+  if (isFoodMainCategory(slug, title) || isFoodMainCategory(catalogKey, title)) return false;
+  const k = `${slug} ${catalogKey} ${title}`.toLowerCase().replace(/_/g, "-");
+  if (k.includes("food-beverage")) return false;
+  return (
+    k.includes("beverage") ||
+    k.includes("drink") ||
+    k.includes("juice") ||
+    k.includes("soda") ||
+    k.includes("soft-drink")
+  );
+}
+
 function isGroceryListMainCategory(slug: string, title: string): boolean {
   const k = `${slug} ${title}`.toLowerCase().replace(/_/g, "-");
+  return k.includes("grocery") || k.includes("daily") || k.includes("essential");
+}
+
+function isDailyEssentialsMainCategory(slug: string, catalogKey: string, title: string): boolean {
+  const k = `${slug} ${catalogKey} ${title}`.toLowerCase().replace(/_/g, "-");
   return k.includes("grocery") || k.includes("daily") || k.includes("essential");
 }
 
@@ -291,10 +348,13 @@ export default function CategoryHubScreen() {
   const [personalCareSpotlightProducts, setPersonalCareSpotlightProducts] = useState<FoodSpotlightProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [foodBannerIndex, setFoodBannerIndex] = useState(0);
+  const foodBannerScrollRef = useRef<ScrollView>(null);
 
   const gap = 8;
   const pad = 16;
   const cell = (width - pad * 2 - gap * 2) / 3;
+  const foodBannerSlideW = width - pad * 2;
 
   const load = useCallback(async () => {
     setErr(null);
@@ -329,7 +389,7 @@ export default function CategoryHubScreen() {
           setFoodSpotlightProducts(quick.data.products.filter((p) => (typeof p.stock === "number" ? p.stock > 0 : true)));
         }
       } else if (
-        isPersonalCareMainCategory(catalogMainKey, displayName) &&
+        isPersonalCareMainCategory(s, catalogMainKey, displayName) &&
         !isFreshMainCategory(s, displayName)
       ) {
         const quick = await api<{ products: FoodSpotlightProduct[] }>(
@@ -355,16 +415,61 @@ export default function CategoryHubScreen() {
   }, [load]);
 
   const title = data?.mainCategory?.name ?? s.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+  useEffect(() => {
+    if (!isFoodMainCategory(catalogMainKey, title)) return;
+    const t = setInterval(() => {
+      setFoodBannerIndex((prev) => {
+        const next = (prev + 1) % FOOD_BANNER_SLIDES.length;
+        foodBannerScrollRef.current?.scrollTo({ x: next * foodBannerSlideW, animated: true });
+        return next;
+      });
+    }, 4500);
+    return () => clearInterval(t);
+  }, [catalogMainKey, title, foodBannerSlideW]);
   const catalogKey = data?.mainCategory?.key ?? s;
   const categories = data?.categories ?? [];
   const showFoodGridAds = isFoodMainCategory(catalogMainKey, title);
   const showFreshTheme = isFreshMainCategory(s, title);
   const showPersonalCarePremium =
-    !showFoodGridAds && !showFreshTheme && isPersonalCareMainCategory(catalogMainKey, title);
+    !showFoodGridAds && !showFreshTheme && isPersonalCareMainCategory(s, catalogKey, title);
+  const showHouseholdTheme =
+    !showFoodGridAds &&
+    !showFreshTheme &&
+    !showPersonalCarePremium &&
+    isHouseholdMainCategory(s, catalogKey, title);
+  const showBeveragesTheme =
+    !showFoodGridAds &&
+    !showFreshTheme &&
+    !showPersonalCarePremium &&
+    !showHouseholdTheme &&
+    isBeveragesMainCategory(s, catalogKey, title);
   const showGroceryListReminder = isGroceryListMainCategory(catalogMainKey, title);
+  const categoryBannerW = width - pad * 2;
+  const dairyStorefrontEligible =
+    Boolean(data) &&
+    !showFoodGridAds &&
+    !showFreshTheme &&
+    !showPersonalCarePremium &&
+    isDairyMainCategory(s, catalogKey, title);
+  const householdStorefrontEligible =
+    Boolean(data) &&
+    !showFoodGridAds &&
+    !showFreshTheme &&
+    !showPersonalCarePremium &&
+    showHouseholdTheme &&
+    !dairyStorefrontEligible;
+  const dailyEssentialsEligible =
+    Boolean(data) &&
+    !showFoodGridAds &&
+    !showFreshTheme &&
+    !showPersonalCarePremium &&
+    !showHouseholdTheme &&
+    !dairyStorefrontEligible &&
+    !householdStorefrontEligible &&
+    isDailyEssentialsMainCategory(s, catalogKey, title);
   const foodDisplayStores = foodStores;
   const maxFoodDiscount = maxFoodDiscountPercent(foodSpotlightProducts);
-  const maxRupeeSave = maxRupeeSaveOnMenu(foodSpotlightProducts);
   const cuisineBrowseTiles = categories
     .map((c) => ({ category: c, image: firstPreviewImage(c) }))
     .filter((row): row is { category: CatalogCategory; image: string } => Boolean(row.image));
@@ -373,7 +478,21 @@ export default function CategoryHubScreen() {
   const foodCanvas = "#fbf3df";
   const freshCanvas = "#eaf7ff";
   const personalCareCanvas = "#faf7fb";
-  const pageBg = showFreshTheme ? freshCanvas : showFoodGridAds ? foodCanvas : showPersonalCarePremium ? personalCareCanvas : theme.bg;
+  const pageBg = dairyStorefrontEligible
+    ? "#f4f6f8"
+    : householdStorefrontEligible
+      ? "#f5f3ff"
+      : dailyEssentialsEligible
+      ? "#f4f7f4"
+      : showFreshTheme
+      ? freshCanvas
+      : showFoodGridAds
+        ? foodCanvas
+        : showPersonalCarePremium
+          ? personalCareCanvas
+          : showBeveragesTheme
+            ? "#eff6ff"
+            : theme.bg;
 
   const pcMaxDiscount = maxFoodDiscountPercent(personalCareSpotlightProducts);
   const pcMaxRupeeSave = maxRupeeSaveOnMenu(personalCareSpotlightProducts);
@@ -431,6 +550,55 @@ export default function CategoryHubScreen() {
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
+      ) : dairyStorefrontEligible ? (
+        <DairyCategoryStorefront
+          bottomInset={insets.bottom}
+          slug={s}
+          catalogKey={catalogKey}
+          lat={la}
+          lng={ln}
+          chips={categories.map((c) => ({
+            id: c.id,
+            name: c.name,
+            thumb: firstPreviewImage(c) ?? null,
+          }))}
+        />
+      ) : dailyEssentialsEligible ? (
+        <DailyEssentialsStorefront
+          bottomInset={insets.bottom}
+          categoryTitle={title}
+          catalogKey={catalogKey}
+          lat={la}
+          lng={ln}
+          chips={categories.map((c) => ({
+            id: c.id,
+            name: c.name,
+            thumb: firstPreviewImage(c) ?? null,
+          }))}
+          onOpenSub={(chip) => {
+            const href =
+              `/category/${encodeURIComponent(s)}/${encodeURIComponent(chip.id)}?lat=${encodeURIComponent(String(la))}&lng=${encodeURIComponent(String(ln))}&catalogKey=${encodeURIComponent(catalogKey)}&subname=${encodeURIComponent(chip.name)}` as Href;
+            router.push(href);
+          }}
+        />
+      ) : householdStorefrontEligible ? (
+        <HouseholdCategoryStorefront
+          bottomInset={insets.bottom}
+          categoryTitle={title}
+          catalogKey={catalogKey}
+          lat={la}
+          lng={ln}
+          chips={categories.map((c) => ({
+            id: c.id,
+            name: c.name,
+            thumb: firstPreviewImage(c) ?? null,
+          }))}
+          onOpenSub={(chip) => {
+            const href =
+              `/category/${encodeURIComponent(s)}/${encodeURIComponent(chip.id)}?lat=${encodeURIComponent(String(la))}&lng=${encodeURIComponent(String(ln))}&catalogKey=${encodeURIComponent(catalogKey)}&subname=${encodeURIComponent(chip.name)}` as Href;
+            router.push(href);
+          }}
+        />
       ) : (
         <ScrollView
           contentContainerStyle={{
@@ -487,67 +655,51 @@ export default function CategoryHubScreen() {
             <View style={{ marginBottom: 18 }}>
               <View
                 style={{
-                  borderRadius: 26,
+                  borderRadius: 22,
                   overflow: "hidden",
-                  backgroundColor: "#2e1065",
-                  elevation: 6,
-                  shadowColor: "#1e1b4b",
-                  shadowOffset: { width: 0, height: 10 },
-                  shadowOpacity: 0.35,
-                  shadowRadius: 20,
+                  backgroundColor: "#fff7ed",
+                  ...foodBannerCardShadow,
                 }}
               >
-                <LinearGradient
-                  colors={["#1e1b4b", "#4c1d95", "#5b21b6"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{ minHeight: 194, padding: 18 }}
+                <ScrollView
+                  ref={foodBannerScrollRef}
+                  horizontal
+                  pagingEnabled
+                  nestedScrollEnabled
+                  showsHorizontalScrollIndicator={false}
+                  bounces={false}
+                  decelerationRate="fast"
+                  removeClippedSubviews={false}
+                  onMomentumScrollEnd={(e) => {
+                    const x = e.nativeEvent.contentOffset.x;
+                    const idx = Math.round(x / Math.max(1, foodBannerSlideW));
+                    setFoodBannerIndex(Math.max(0, Math.min(idx, FOOD_BANNER_SLIDES.length - 1)));
+                  }}
+                  style={{ width: foodBannerSlideW, height: FOOD_BANNER_H }}
                 >
-                  <Image
-                    source={{ uri: FOOD_BANNER_DECOR.burger }}
-                    style={{ position: "absolute", right: -10, top: 22, width: 164, height: 132, borderRadius: 24 }}
-                    contentFit="cover"
+                  {FOOD_BANNER_SLIDES.map((src, i) => (
+                    <Image
+                      key={i}
+                      source={src}
+                      style={{ width: foodBannerSlideW, height: FOOD_BANNER_H }}
+                      contentFit="cover"
+                      contentPosition="left center"
+                    />
+                  ))}
+                </ScrollView>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 8 }}>
+                {FOOD_BANNER_SLIDES.map((_, i) => (
+                  <View
+                    key={i}
+                    style={{
+                      width: i === foodBannerIndex ? 8 : 6,
+                      height: i === foodBannerIndex ? 8 : 6,
+                      borderRadius: 99,
+                      backgroundColor: i === foodBannerIndex ? "#ea580c" : "#cbd5e1",
+                    }}
                   />
-                  <Image
-                    source={{ uri: FOOD_BANNER_DECOR.pizza }}
-                    style={{ position: "absolute", right: 82, bottom: 13, width: 132, height: 88, borderRadius: 22 }}
-                    contentFit="cover"
-                  />
-                  <Image
-                    source={{ uri: FOOD_BANNER_DECOR.coldDrink }}
-                    style={{ position: "absolute", right: 0, bottom: 9, width: 88, height: 78, borderRadius: 18 }}
-                    contentFit="cover"
-                  />
-                  <View style={{ width: "52%" }}>
-                    <Text style={{ color: "#c4b5fd", fontSize: 10, fontWeight: "900", letterSpacing: 0.9 }}>UP TO</Text>
-                    <Text style={{ color: "#ffffff", fontSize: 36, lineHeight: 38, fontWeight: "900", letterSpacing: -1 }}>
-                      {maxFoodDiscount >= 5 ? `${Math.round(maxFoodDiscount)}% OFF` : "MENU DEALS"}
-                    </Text>
-                    {maxRupeeSave > 0 ? (
-                      <Text style={{ color: "#f5f3ff", fontSize: 14, fontWeight: "900", marginTop: 5 }}>Save up to ₹{maxRupeeSave}</Text>
-                    ) : (
-                      <Text style={{ color: "#f5f3ff", fontSize: 14, fontWeight: "900", marginTop: 5 }}>From nearby kitchens</Text>
-                    )}
-                    <Text style={{ color: "#ddd6fe", fontSize: 11.5, fontWeight: "800", marginTop: 6 }}>Picked from live catalog prices</Text>
-                    {foodDisplayStores.length > 0 ? (
-                      <Text style={{ color: "#e9d5ff", fontSize: 10.5, fontWeight: "800", marginTop: 16 }}>
-                        {foodDisplayStores.length} restaurant{foodDisplayStores.length === 1 ? "" : "s"} near you
-                      </Text>
-                    ) : null}
-                    <Pressable
-                      onPress={orderNowFromBanner}
-                      style={{ marginTop: 13, alignSelf: "flex-start", borderRadius: 10, backgroundColor: "#ffffff", paddingHorizontal: 15, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 8 }}
-                    >
-                      <Text style={{ color: "#1e1b4b", fontSize: 11, fontWeight: "900" }}>Order Now</Text>
-                      <MaterialCommunityIcons name="arrow-right" size={15} color="#1e1b4b" />
-                    </Pressable>
-                  </View>
-                  <View style={{ position: "absolute", right: 18, top: 18, width: 64, height: 64, borderRadius: 32, backgroundColor: "rgba(255,255,255,0.95)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.35)" }}>
-                    <Text style={{ color: "#4c1d95", fontSize: 10, fontWeight: "900", textAlign: "center" }}>
-                      FREE{"\n"}DELIVERY
-                    </Text>
-                  </View>
-                </LinearGradient>
+                ))}
               </View>
 
               <View style={{ marginTop: 14, borderRadius: 16, backgroundColor: "#ffffff", borderWidth: 1, borderColor: "#fee2e2", flexDirection: "row", paddingVertical: 12 }}>
@@ -716,78 +868,7 @@ export default function CategoryHubScreen() {
             </View>
           ) : showPersonalCarePremium ? (
             <View style={{ marginBottom: 14 }}>
-              <View
-                style={{
-                  borderRadius: 20,
-                  overflow: "hidden",
-                  backgroundColor: "#2e1065",
-                  ...personalCareHeroShadow,
-                }}
-              >
-                <LinearGradient
-                  colors={["#0f172a", "#4c1d95", "#831843"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{
-                    minHeight: 132,
-                    paddingVertical: 12,
-                    paddingHorizontal: 14,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 12,
-                  }}
-                >
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={{ color: "#fae8ff", fontSize: 9, fontWeight: "900", letterSpacing: 1.2 }}>PERSONAL CARE</Text>
-                    <Text
-                      style={{ color: "#ffffff", fontSize: 22, lineHeight: 26, fontWeight: "900", letterSpacing: -0.5, marginTop: 4 }}
-                      numberOfLines={2}
-                    >
-                      {title}
-                    </Text>
-                    <Text style={{ color: "#fbcfe8", fontSize: 12, fontWeight: "700", marginTop: 6, lineHeight: 16 }} numberOfLines={2}>
-                      Daily hygiene & grooming — curated for your routine.
-                    </Text>
-                    <Pressable
-                      onPress={orderNowFromBanner}
-                      style={{
-                        marginTop: 10,
-                        alignSelf: "flex-start",
-                        borderRadius: 999,
-                        backgroundColor: "#ffffff",
-                        paddingHorizontal: 14,
-                        paddingVertical: 8,
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <Text style={{ color: "#4c1d95", fontSize: 11, fontWeight: "900" }}>Explore aisles</Text>
-                      <MaterialCommunityIcons name="arrow-right" size={15} color="#4c1d95" />
-                    </Pressable>
-                  </View>
-                  <View
-                    style={{
-                      width: Math.min(118, Math.round(width * 0.3)),
-                      height: 108,
-                      borderRadius: 16,
-                      overflow: "hidden",
-                      borderWidth: 2,
-                      borderColor: "rgba(255,255,255,0.45)",
-                      flexShrink: 0,
-                      backgroundColor: "rgba(0,0,0,0.2)",
-                    }}
-                  >
-                    <Image
-                      source={{ uri: PERSONAL_CARE_HERO.primary }}
-                      style={{ width: "100%", height: "100%" }}
-                      contentFit="cover"
-                      contentPosition="right"
-                    />
-                  </View>
-                </LinearGradient>
-              </View>
+              <CategoryAssetBanner source={CATEGORY_BG_BANNERS.personal} bannerW={categoryBannerW} />
 
               <View style={{ marginTop: 14 }}>
                 <LinearGradient
@@ -985,6 +1066,10 @@ export default function CategoryHubScreen() {
                 ) : null}
               </View>
             </View>
+          ) : showBeveragesTheme ? (
+            <CategoryAssetBanner source={CATEGORY_BG_BANNERS.beverages} bannerW={categoryBannerW} />
+          ) : showHouseholdTheme ? (
+            <CategoryAssetBanner source={CATEGORY_BG_BANNERS.household} bannerW={categoryBannerW} />
           ) : (
             <CategoryPromoBanner
               categorySlug={s}
@@ -993,7 +1078,7 @@ export default function CategoryHubScreen() {
             />
           )}
 
-          {showGroceryListReminder ? (
+          {showGroceryListReminder && !dailyEssentialsEligible && !householdStorefrontEligible ? (
             <GroceryListUploadCard variant="compact" style={{ marginBottom: 14 }} />
           ) : null}
 
