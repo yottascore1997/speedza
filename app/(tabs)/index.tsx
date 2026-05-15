@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
   View,
   Text,
   ScrollView,
@@ -15,27 +14,16 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 import { api, getApiBase, getToken } from "@/lib/api";
 import { theme } from "@/lib/theme";
 import { resolveMediaUrl } from "@/lib/assets";
 import { ShopMarketHeader } from "@/components/ShopMarketHeader";
-import { ProductPriceOfferRow } from "@/components/ProductPriceOfferRow";
-import { FREE_DELIVERY_MIN_SUBTOTAL } from "@/lib/free-delivery";
+import { CartQtyStepper, type CartQtyStepperLine } from "@/components/CartQtyStepper";
 
 const HEADER_SHOP_ACTIVE = "__shop__";
 
 const DEFAULT_LAT = 28.4595;
 const DEFAULT_LNG = 77.0266;
-
-type StoreItem = {
-  id: string;
-  name: string;
-  address: string;
-  distanceKm: number;
-  shopVertical: string;
-  imageUrl?: string | null;
-};
 
 type MainCategory = {
   id: string;
@@ -57,106 +45,58 @@ type ProductHit = {
   store?: { id: string; name: string };
 };
 
-/** Demo row — “Deals starting at ₹9” carousel (replace with API when ready) */
-const DEALS_CAROUSEL_DUMMY: ProductHit[] = [
-  {
-    id: "deal-dummy-1",
-    name: "Pampers Premium Care Small",
-    price: 19,
-    mrp: 74,
-    imageUrl: "https://images.unsplash.com/photo-1584515933487-779824d29309?w=400&h=400&fit=crop&q=80",
-    unitLabel: "1 pack (4 pcs)",
-    stock: 99,
-  },
-  {
-    id: "deal-dummy-2",
-    name: "Zoff Gravy Mix Masala",
-    price: 15,
-    mrp: 45,
-    imageUrl: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=400&h=400&fit=crop&q=80",
-    unitLabel: "50 g",
-    stock: 99,
-  },
-  {
-    id: "deal-dummy-3",
-    name: "Amul Gold Full Cream Milk",
-    price: 28,
-    mrp: 32,
-    imageUrl: "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400&h=400&fit=crop&q=80",
-    unitLabel: "500 ml",
-    stock: 99,
-  },
-  {
-    id: "deal-dummy-4",
-    name: "Lay's Classic Salted Chips",
-    price: 12,
-    mrp: 20,
-    imageUrl: "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=400&h=400&fit=crop&q=80",
-    unitLabel: "52 g",
-    stock: 99,
-  },
-  {
-    id: "deal-dummy-5",
-    name: "Nescafe Classic Coffee",
-    price: 22,
-    mrp: 40,
-    imageUrl: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400&h=400&fit=crop&q=80",
-    unitLabel: "50 g",
-    stock: 99,
-  },
-  {
-    id: "deal-dummy-6",
-    name: "Dettol Antiseptic Liquid",
-    price: 9,
-    mrp: 18,
-    imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=400&fit=crop&q=80",
-    unitLabel: "125 ml",
-    stock: 99,
-  },
-];
-
-const HERO_SLIDES = [
-  {
-    id: "grocery",
-    eyebrow: "Speedza",
-    title: "Grocery specials",
-    subtitle: "Fresh pantry picks & fast delivery.",
-    bg: ["#dbeafe", "#60a5fa", "#1d4ed8"] as const,
-    text: "#172554",
-    subText: "#1e3a8a",
-    image:
-      "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&h=500&fit=crop&q=80",
-  },
-  {
-    id: "vegetables",
-    eyebrow: "Farm Fresh",
-    title: "Fruits & vegetables",
-    subtitle: "Seasonal quality at your door.",
-    bg: ["#bbf7d0", "#4ade80", "#15803d"] as const,
-    text: "#073b1d",
-    subText: "#14532d",
-    image:
-      "https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=800&h=500&fit=crop&q=80",
-  },
-  {
-    id: "daily",
-    eyebrow: "Daily Needs",
-    title: "Daily essentials",
-    subtitle: "Milk, bread, snacks & more.",
-    bg: ["#dbeafe", "#93c5fd", "#60a5fa"] as const,
-    text: "#172554",
-    subText: "#1e3a8a",
-    image:
-      "https://images.unsplash.com/photo-1601599561213-832382fd07ba?w=800&h=500&fit=crop&q=80",
-  },
-] as const;
+type HeroSlide = {
+  id: string;
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  bg: readonly [string, string, string];
+  text: string;
+  subText: string;
+  image: string;
+};
 
 const { width: SCREEN_W } = Dimensions.get("window");
 
-/** 3-column compact main category tiles under “Shop by category” */
-const CATEGORY_GRID_GAP = 5;
-const CATEGORY_GRID_PAD = 14;
-const categoryTileW = (SCREEN_W - CATEGORY_GRID_PAD * 2 - CATEGORY_GRID_GAP * 2) / 3;
+/** Home product rails — compact tiles so ~2.5–3 cards peek per row */
+const HOME_RAIL_CARD_W = Math.max(104, Math.min(124, Math.round((SCREEN_W - 52) / 2.85)));
+const HOME_RAIL_IMAGE_H = Math.round(HOME_RAIL_CARD_W * 0.64);
+/** Hero right image strip — keep in sync with ScrollView / Pressable heights below */
+const HOME_HERO_IMG_H = 174;
+
+/** Hero image slider — labels + category routes + Unsplash art. */
+const HOME_HERO_IMAGE_SLIDES = [
+  {
+    id: "kirana",
+    label: "Kirana",
+    image:
+      "https://images.unsplash.com/photo-1761222191837-4448599c09fc?auto=format&fit=crop&w=900&h=1100&q=88",
+    categoryKey: "grocery",
+  },
+  {
+    id: "daily",
+    label: "Daily products",
+    image: "https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=800&h=1000&q=85",
+    categoryKey: "daily-essentials",
+  },
+  {
+    id: "fruits",
+    label: "Fruits",
+    image: "https://images.unsplash.com/photo-1619566636858-adf3ef46400b?auto=format&fit=crop&w=800&h=1000&q=85",
+    categoryKey: "fruits-vegetables",
+  },
+] as const;
+
+const heroOfferCardShadow = Platform.select({
+  ios: {
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+  },
+  android: { elevation: 6 },
+  default: {},
+});
 
 function previewMainCategoryImage(m: MainCategory): string | undefined {
   const hit = m.subcategories.find((s) => s.imageUrl?.trim());
@@ -164,7 +104,7 @@ function previewMainCategoryImage(m: MainCategory): string | undefined {
 }
 
 /** Horizontal subcategory tile width (web-style cards) */
-const SUB_CARD_W = 104;
+const SUB_CARD_W = 92;
 const SECTION_PAD = 16;
 
 /** 4 coupon tiles in one row — no horizontal scroll */
@@ -238,13 +178,44 @@ function numPrice(p: unknown): number {
   return Number(p) || 0;
 }
 
-function normText(v: string): string {
-  return v.trim().toLowerCase().replace(/\s+/g, " ");
+function discountPercentForProduct(p: ProductHit): number {
+  if (typeof p.discountPercent === "number" && p.discountPercent > 0) return Math.round(p.discountPercent);
+  const price = numPrice(p.price);
+  const mrp = numPrice(p.mrp);
+  if (mrp > 0 && price > 0 && price < mrp) return Math.round(((mrp - price) / mrp) * 100);
+  return 0;
 }
 
-function isFashionMainCategory(mainKey: string): boolean {
-  const k = normMainKey(mainKey);
-  return k.includes("fashion") || k.includes("apparel") || k.includes("clothing");
+function cartLineFromProductHit(p: ProductHit): CartQtyStepperLine | null {
+  const storeId = p.store?.id?.trim();
+  if (!storeId) return null;
+  const rawDisc =
+    typeof p.discountPercent === "number" && p.discountPercent > 0
+      ? p.discountPercent
+      : discountPercentForProduct(p);
+  return {
+    productId: p.id,
+    storeId,
+    name: p.name,
+    price: numPrice(p.price),
+    storeName: p.store?.name,
+    imageUrl: p.imageUrl ?? null,
+    unitLabel: p.unitLabel ?? null,
+    mrp: numPrice(p.mrp) > 0 ? numPrice(p.mrp) : null,
+    discountPercent: rawDisc > 0 ? rawDisc : null,
+  };
+}
+
+function homeCategoryIconName(key: string, name: string): keyof typeof MaterialCommunityIcons.glyphMap {
+  const k = `${key} ${name}`.toLowerCase();
+  if (k.includes("fruit") || k.includes("vegetable") || k.includes("fresh")) return "fruit-cherries";
+  if (k.includes("grocery") || k.includes("daily") || k.includes("essential")) return "rice";
+  if (k.includes("dairy") || k.includes("bread") || k.includes("egg")) return "bread-slice-outline";
+  if (k.includes("beverage") || k.includes("drink")) return "bottle-soda-outline";
+  if (k.includes("snack")) return "cookie-outline";
+  if (k.includes("personal") || k.includes("beauty") || k.includes("care")) return "bottle-tonic-outline";
+  if (k.includes("fashion")) return "tshirt-crew-outline";
+  return "dots-grid";
 }
 
 function featuredTheme(mainKey: string) {
@@ -281,17 +252,18 @@ export default function ShopHomeScreen() {
   const insets = useSafeAreaInsets();
   const [lat, setLat] = useState(DEFAULT_LAT);
   const [lng, setLng] = useState(DEFAULT_LNG);
-  const [stores, setStores] = useState<StoreItem[]>([]);
   const [mains, setMains] = useState<MainCategory[]>([]);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
   const [err, setErr] = useState<string | null>(null);
-  const [sendingList, setSendingList] = useState(false);
   const [offerProducts, setOfferProducts] = useState<ProductHit[]>([]);
   const [dealsNine, setDealsNine] = useState<ProductHit[]>([]);
-  const [bestSelling, setBestSelling] = useState<ProductHit[]>([]);
-  const [fashionProducts, setFashionProducts] = useState<ProductHit[]>([]);
+  const [browseProducts, setBrowseProducts] = useState<ProductHit[]>([]);
+
+  const heroImgSlideW = SCREEN_W * 0.34;
+  const heroImgScrollRef = useRef<ScrollView>(null);
+  const [heroImgIndex, setHeroImgIndex] = useState(0);
 
   const resolveCoords = useCallback(async () => {
     const token = await getToken();
@@ -314,32 +286,31 @@ export default function ShopHomeScreen() {
       setLat(la);
       setLng(ln);
 
-      const [nearby, tree, banner, productsA, productsE, fashionQuick] = await Promise.all([
-        api<{ stores: StoreItem[] }>(
-          `/api/stores/nearby?lat=${la}&lng=${ln}&radiusKm=60&limit=30`,
-        ),
+      const [tree, banner, groceryQuick, searchExtra] = await Promise.all([
         api<{ mains: MainCategory[] }>("/api/master/shop-tree"),
         api<{ imageUrl: string | null }>("/api/shop/todays-match-banner"),
-        api<{ products: ProductHit[] }>(`/api/shop/search?q=${encodeURIComponent("a")}&limit=50`),
-        api<{ products: ProductHit[] }>(`/api/shop/search?q=${encodeURIComponent("e")}&limit=50`),
         api<{ products: ProductHit[] }>(
-          `/api/shop/category-quick?vertical=${encodeURIComponent("fashion")}&lat=${encodeURIComponent(String(la))}&lng=${encodeURIComponent(String(ln))}&radiusKm=60&limit=120`,
+          `/api/shop/category-quick?vertical=${encodeURIComponent("grocery")}&lat=${encodeURIComponent(String(la))}&lng=${encodeURIComponent(String(ln))}&limit=80`,
         ),
+        api<{ products: ProductHit[] }>(`/api/shop/search?q=${encodeURIComponent("in")}&limit=40`),
       ]);
 
-      if (nearby.ok && nearby.data) setStores(nearby.data.stores);
-      else setErr(nearby.error || "Could not load stores");
-
-      if (tree.ok && tree.data) setMains(tree.data.mains);
+      if (tree.ok && tree.data?.mains) {
+        setMains(tree.data.mains);
+      } else {
+        setMains([]);
+        if (!tree.ok) setErr(tree.error || "Could not load categories");
+      }
       if (banner.ok && banner.data?.imageUrl?.trim()) {
         setBannerUrl(resolveMediaUrl(banner.data.imageUrl) ?? null);
       } else {
         setBannerUrl(`${getApiBase()}/banners/todays-match.svg`);
       }
 
-      const mergedProducts = [...(productsA.data?.products ?? []), ...(productsE.data?.products ?? [])]
+      const mergedProducts = [...(groceryQuick.data?.products ?? []), ...(searchExtra.data?.products ?? [])]
         .filter((p) => (typeof p.stock === "number" ? p.stock > 0 : true))
         .filter((p, i, arr) => arr.findIndex((x) => x.id === p.id) === i);
+      setBrowseProducts(mergedProducts.slice(0, 40));
 
       const offers = mergedProducts
         .filter((p) => numPrice(p.mrp) > 0 && numPrice(p.price) > 0 && numPrice(p.price) < numPrice(p.mrp))
@@ -356,24 +327,6 @@ export default function ShopHomeScreen() {
         .slice(0, 12);
       setDealsNine(dealRange);
 
-      const best = mergedProducts
-        .sort((a, b) => {
-          const da = typeof a.discountPercent === "number" ? a.discountPercent : 0;
-          const db = typeof b.discountPercent === "number" ? b.discountPercent : 0;
-          if (db !== da) return db - da;
-          return numPrice(a.price) - numPrice(b.price);
-        })
-        .slice(0, 12);
-      setBestSelling(best);
-      if (fashionQuick.ok && fashionQuick.data?.products) {
-        setFashionProducts(
-          fashionQuick.data.products.filter((p) =>
-            typeof p.stock === "number" ? p.stock > 0 : true,
-          ),
-        );
-      } else {
-        setFashionProducts([]);
-      }
     } finally {
       setLoading(false);
     }
@@ -383,14 +336,76 @@ export default function ShopHomeScreen() {
     void loadAll();
   }, [loadAll]);
 
+  const heroSlides = useMemo((): HeroSlide[] => {
+    const out: HeroSlide[] = [];
+    for (const m of mains) {
+      const img = previewMainCategoryImage(m);
+      if (!img) continue;
+      const th = featuredTheme(m.key);
+      out.push({
+        id: m.key,
+        eyebrow: "Speedza",
+        title: m.name,
+        subtitle: m.subcategories.length ? `${m.subcategories.length} aisles to explore` : "Browse on Speedza",
+        image: img,
+        bg: th.shell,
+        text: th.title,
+        subText: th.sub,
+      });
+    }
+    return out;
+  }, [mains]);
+
+  const activeHeroSlide = useMemo((): HeroSlide => {
+    if (heroSlides.length > 0) return heroSlides[heroIndex % heroSlides.length]!;
+    return {
+      id: "shop",
+      eyebrow: "Speedza",
+      title: "Speedza Market",
+      subtitle: "Groceries & essentials near you",
+      image: bannerUrl ?? `${getApiBase()}/banners/todays-match.svg`,
+      bg: ["#dbeafe", "#60a5fa", "#1d4ed8"] as const,
+      text: "#172554",
+      subText: "#1e3a8a",
+    };
+  }, [heroSlides, heroIndex, bannerUrl]);
+
+  const flashDealProducts = useMemo(() => {
+    if (dealsNine.length > 0) return dealsNine.slice(0, 12);
+    const discounted = browseProducts.filter((p) => discountPercentForProduct(p) >= 5);
+    if (discounted.length > 0) return discounted.slice(0, 12);
+    return browseProducts.slice(0, 12);
+  }, [dealsNine, browseProducts]);
+
+  const bestSellingRail = useMemo(() => {
+    if (offerProducts.length > 0) return offerProducts.slice(0, 8);
+    return browseProducts.slice(0, 8);
+  }, [offerProducts, browseProducts]);
+
+  const moreBrowseRail = useMemo(() => browseProducts.slice(8, 20), [browseProducts]);
+
   useEffect(() => {
+    setHeroIndex(0);
+  }, [heroSlides.length]);
+
+  useEffect(() => {
+    if (heroSlides.length <= 1) return;
     const t = setInterval(() => {
-      setHeroIndex((i) => (i + 1) % HERO_SLIDES.length);
+      setHeroIndex((i) => (i + 1) % heroSlides.length);
     }, 4500);
     return () => clearInterval(t);
-  }, []);
+  }, [heroSlides.length]);
 
-  const slide = HERO_SLIDES[heroIndex];
+  useEffect(() => {
+    const t = setInterval(() => {
+      setHeroImgIndex((prev) => {
+        const next = (prev + 1) % HOME_HERO_IMAGE_SLIDES.length;
+        heroImgScrollRef.current?.scrollTo({ x: next * heroImgSlideW, animated: true });
+        return next;
+      });
+    }, 4200);
+    return () => clearInterval(t);
+  }, [heroImgSlideW]);
 
   function openCategory(key: string) {
     const href =
@@ -404,84 +419,17 @@ export default function ShopHomeScreen() {
     router.push(href);
   }
 
-  async function uploadListFromHome() {
-    const token = await getToken();
-    if (!token) {
-      Alert.alert("Sign in required", "Please login first, then upload your grocery list photo.");
-      router.push("/login");
-      return;
-    }
-
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert("Permission needed", "Allow gallery access to upload list photo.");
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.85,
-    });
-    if (result.canceled || !result.assets?.[0]?.uri) return;
-
-    setSendingList(true);
-    try {
-      const imageUri = result.assets[0].uri;
-      const ext = imageUri.split(".").pop()?.toLowerCase() || "jpg";
-      const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
-      const fd = new FormData();
-      fd.append("file", { uri: imageUri, name: `list.${ext}`, type: mime } as any);
-
-      const up = await fetch(`${getApiBase()}/api/list-requests/upload-image`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd as any,
-      });
-      const upJson = (await up.json().catch(() => null)) as { imageUrl?: string; error?: string } | null;
-      if (!up.ok || !upJson?.imageUrl) {
-        Alert.alert("Upload failed", upJson?.error || "Could not upload list image");
-        return;
-      }
-
-      const addr = await api<{ address: { address: string } | null }>("/api/user/address");
-      const createRes = await api("/api/list-requests", {
-        method: "POST",
-        body: JSON.stringify({
-          imageUrl: upJson.imageUrl,
-          note: "",
-          address: addr.ok && addr.data?.address?.address ? addr.data.address.address : "",
-        }),
-      });
-      if (!createRes.ok) {
-        Alert.alert("Request failed", createRes.error || "Could not create request");
-        return;
-      }
-
-      Alert.alert(
-        "List sent",
-        "Admin received your grocery list photo. You can track status in Account.",
-        [
-          { text: "OK" },
-          { text: "Open Account", onPress: () => router.push("/account") },
-        ],
-      );
-    } finally {
-      setSendingList(false);
-    }
-  }
-
   return (
     <View style={{ flex: 1, backgroundColor: theme.homeCanvasBg }}>
       <ScrollView
         style={{ backgroundColor: theme.homeCanvasBg }}
         contentContainerStyle={{
-          paddingBottom: 24 + insets.bottom,
+          paddingBottom: 36 + insets.bottom,
         }}
-        stickyHeaderIndices={[0]}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={() => void loadAll()} tintColor={theme.brandNavOrange} />
         }
+        stickyHeaderIndices={[0]}
         showsVerticalScrollIndicator={false}
       >
         <ShopMarketHeader
@@ -491,6 +439,281 @@ export default function ShopHomeScreen() {
           onShopPress={() => router.replace("/")}
           onCategoryPress={(key) => openCategory(key)}
         />
+
+        <LinearGradient
+          colors={["#ffffff", "#f4fdf7", "#ffffff"]}
+          locations={[0, 0.45, 1]}
+          style={{
+            paddingTop: 8,
+            paddingHorizontal: 18,
+            paddingBottom: 18,
+            borderBottomLeftRadius: 34,
+            borderBottomRightRadius: 34,
+            overflow: "hidden",
+          }}
+        >
+          <View style={{ marginTop: 0, minHeight: 228 }}>
+            <MaterialCommunityIcons name="leaf" size={20} color="#86efac" style={{ position: "absolute", left: 4, top: 24, opacity: 0.45, transform: [{ rotate: "-22deg" }] }} />
+            <MaterialCommunityIcons name="leaf" size={16} color="#bbf7d0" style={{ position: "absolute", left: 120, top: 6, opacity: 0.5, transform: [{ rotate: "16deg" }] }} />
+            <MaterialCommunityIcons name="leaf" size={18} color="#86efac" style={{ position: "absolute", right: 8, top: 72, opacity: 0.4, transform: [{ rotate: "24deg" }] }} />
+            <MaterialCommunityIcons name="leaf" size={15} color="#bbf7d0" style={{ position: "absolute", right: 100, bottom: 100, opacity: 0.42, transform: [{ rotate: "-14deg" }] }} />
+            <MaterialCommunityIcons name="food-apple" size={44} color="#bbf7d0" style={{ position: "absolute", right: -6, top: 120, opacity: 0.22 }} />
+            <MaterialCommunityIcons name="carrot" size={36} color="#d9f99d" style={{ position: "absolute", left: 140, bottom: 40, opacity: 0.2, transform: [{ rotate: "25deg" }] }} />
+
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <View style={{ flex: 1, minWidth: 0, paddingTop: 4, zIndex: 2, paddingRight: 4 }}>
+                <Text
+                  numberOfLines={1}
+                  style={{ color: "#111827", fontSize: 32, lineHeight: 36, fontWeight: "800", letterSpacing: -0.55 }}
+                >
+                  Groceries{"\u00A0"}in
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}
+                  style={{ marginTop: 4, color: "#14532d", fontSize: 42, lineHeight: 44, fontWeight: "900", letterSpacing: -1.4 }}
+                >
+                  10 Minutes
+                </Text>
+                <Text style={{ marginTop: 8, color: "#64748b", fontSize: 13, lineHeight: 19, fontWeight: "600" }}>
+                  Fresh groceries & daily essentials delivered to your doorstep
+                </Text>
+
+                <View style={{ marginTop: 10 }}>
+                  <Pressable onPress={() => openCategory(HOME_HERO_IMAGE_SLIDES[heroImgIndex].categoryKey)} style={{ borderRadius: 999, overflow: "hidden", alignSelf: "flex-start" }}>
+                    <LinearGradient
+                      colors={["#f97316", "#ea580c"]}
+                      start={{ x: 0, y: 0.5 }}
+                      end={{ x: 1, y: 0.5 }}
+                      style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 18, paddingVertical: 11 }}
+                    >
+                      <Text style={{ color: "#fff", fontSize: 13, fontWeight: "900" }}>Shop Now</Text>
+                      <MaterialCommunityIcons name="arrow-right" size={18} color="#fff" />
+                    </LinearGradient>
+                  </Pressable>
+                </View>
+              </View>
+
+              <View style={{ width: heroImgSlideW, flexShrink: 0, alignItems: "center" }}>
+                <View
+                  style={{
+                    width: heroImgSlideW,
+                    height: HOME_HERO_IMG_H,
+                    borderRadius: 20,
+                    overflow: "hidden",
+                    backgroundColor: "#ecfdf5",
+                  }}
+                >
+                  <ScrollView
+                    ref={heroImgScrollRef}
+                    horizontal
+                    pagingEnabled
+                    nestedScrollEnabled
+                    showsHorizontalScrollIndicator={false}
+                    bounces={false}
+                    decelerationRate="fast"
+                    removeClippedSubviews={false}
+                    onMomentumScrollEnd={(e) => {
+                      const x = e.nativeEvent.contentOffset.x;
+                      const idx = Math.round(x / Math.max(1, heroImgSlideW));
+                      setHeroImgIndex(Math.max(0, Math.min(idx, HOME_HERO_IMAGE_SLIDES.length - 1)));
+                    }}
+                    style={{ width: heroImgSlideW, height: HOME_HERO_IMG_H }}
+                  >
+                    {HOME_HERO_IMAGE_SLIDES.map((s) => (
+                      <Pressable key={s.id} onPress={() => openCategory(s.categoryKey)} style={{ width: heroImgSlideW, height: HOME_HERO_IMG_H }}>
+                        <Image
+                          source={{ uri: s.image }}
+                          style={{ width: "100%", height: "100%", backgroundColor: "#ecfdf5" }}
+                          contentFit="cover"
+                          cachePolicy="memory-disk"
+                        />
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                  <View
+                    pointerEvents="none"
+                    style={{
+                      position: "absolute",
+                      left: 8,
+                      top: 8,
+                      maxWidth: heroImgSlideW - 16,
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                      borderRadius: 999,
+                      backgroundColor: "rgba(255,255,255,0.94)",
+                      borderWidth: 1,
+                      borderColor: "rgba(22, 101, 52, 0.12)",
+                    }}
+                  >
+                    <Text numberOfLines={2} style={{ color: "#14532d", fontSize: 10.5, lineHeight: 13, fontWeight: "900" }}>
+                      {HOME_HERO_IMAGE_SLIDES[heroImgIndex].label}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      position: "absolute",
+                      right: 4,
+                      bottom: 10,
+                      maxWidth: heroImgSlideW * 0.52,
+                      borderRadius: 14,
+                      backgroundColor: "#ffffff",
+                      paddingVertical: 8,
+                      paddingHorizontal: 10,
+                      borderWidth: 1,
+                      borderColor: "rgba(22, 101, 52, 0.1)",
+                      ...heroOfferCardShadow,
+                    }}
+                  >
+                    <Text style={{ color: "#16a34a", fontSize: 10, fontWeight: "900", letterSpacing: 0.2 }}>FLAT 10% OFF</Text>
+                    <Text style={{ marginTop: 2, color: "#334155", fontSize: 9.5, lineHeight: 13, fontWeight: "700" }}>first order</Text>
+                  </View>
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 4 }}>
+                  {HOME_HERO_IMAGE_SLIDES.map((s, i) => (
+                    <View
+                      key={s.id}
+                      style={{
+                        width: i === heroImgIndex ? 8 : 6,
+                        height: i === heroImgIndex ? 8 : 6,
+                        borderRadius: 99,
+                        backgroundColor: i === heroImgIndex ? "#166534" : "#cbd5e1",
+                      }}
+                    />
+                  ))}
+                </View>
+              </View>
+            </View>
+          </View>
+
+          <View
+            style={{
+              marginTop: -20,
+              borderRadius: 16,
+              backgroundColor: "#1e3d2a",
+              paddingHorizontal: 6,
+              paddingVertical: 8,
+              flexDirection: "row",
+              justifyContent: "space-between",
+              ...bannerCardShadow,
+            }}
+          >
+            {[
+              { icon: "truck-fast-outline" as const, title: "10-15 mins", sub: "Fast Delivery" },
+              { icon: "brightness-percent" as const, title: "Best Prices", sub: "Everyday" },
+              { icon: "shield-check" as const, title: "100% Original", sub: "Products" },
+              { icon: "headphones" as const, title: "24x7", sub: "Support" },
+            ].map((item, index) => (
+              <View
+                key={item.title}
+                style={{
+                  flex: 1,
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 2,
+                  borderLeftWidth: index === 0 ? 0 : 1,
+                  borderLeftColor: "rgba(255,255,255,0.18)",
+                }}
+              >
+                <MaterialCommunityIcons name={item.icon} size={19} color="#f4fff0" />
+                <View style={{ alignItems: "center" }}>
+                  <Text numberOfLines={1} style={{ color: "#fff", fontSize: 9, fontWeight: "900" }}>{item.title}</Text>
+                  <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.76)", fontSize: 7.5, fontWeight: "700" }}>{item.sub}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </LinearGradient>
+
+        <View style={{ marginTop: 12, marginHorizontal: 12, paddingVertical: 4, paddingHorizontal: 0 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingHorizontal: 2, alignItems: "flex-start" }}>
+            {[...mains.slice(0, 8), { id: "view-all", key: "__all__", name: "View All", subcategories: [] }].map((m) => {
+              const img = m.key !== "__all__" ? previewMainCategoryImage(m) : undefined;
+              const th = m.key !== "__all__" ? featuredTheme(m.key) : null;
+              const ring = m.key === "__all__" ? "#22c55e" : th?.border ?? "#16a34a";
+              const softFill = m.key === "__all__" ? "#f0fdf4" : th ? `${String(th.shell[1])}35` : "#f0fdf4";
+              return (
+                <Pressable
+                  key={m.id}
+                  onPress={() => (m.key === "__all__" ? router.push("/categories") : openCategory(m.key))}
+                  style={{ width: 70, alignItems: "center" }}
+                >
+                  <View
+                    style={{
+                      width: 58,
+                      height: 58,
+                      borderRadius: 29,
+                      padding: 3,
+                      backgroundColor: ring,
+                      ...Platform.select({
+                        ios: {
+                          shadowColor: ring,
+                          shadowOffset: { width: 0, height: 3 },
+                          shadowOpacity: 0.22,
+                          shadowRadius: 6,
+                        },
+                        android: { elevation: 4 },
+                        default: {},
+                      }),
+                    }}
+                  >
+                    <View
+                      style={{
+                        flex: 1,
+                        borderRadius: 25,
+                        backgroundColor: softFill,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        overflow: "hidden",
+                        borderWidth: 1.5,
+                        borderColor: "#ffffff",
+                      }}
+                    >
+                      {img ? (
+                        <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+                      ) : (
+                        <MaterialCommunityIcons name={homeCategoryIconName(m.key, m.name)} size={26} color={ring} />
+                      )}
+                    </View>
+                  </View>
+                  <Text numberOfLines={2} style={{ marginTop: 6, color: "#0f172a", fontSize: 10.5, lineHeight: 12.5, fontWeight: "900", textAlign: "center" }}>
+                    {m.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        <View style={{ flexDirection: "row", gap: 12, paddingHorizontal: 16, marginTop: 18 }}>
+          {[
+            { title: "Mega Savings\nOn Staples", sub: "Up to 30% OFF", bg: "#fff6d8", color: "#b45309", action: "Shop Now", icon: "rice" as const },
+            { title: "Personal Care\nEssentials", sub: "Up to 25% OFF", bg: "#eaf3ff", color: "#1d4ed8", action: "Shop Now", icon: "bottle-tonic-outline" as const },
+          ].map((card, idx) => (
+            <Pressable
+              key={card.title}
+              onPress={() => {
+                const hit = mains[idx + 1] ?? mains[idx];
+                if (hit) openCategory(hit.key);
+              }}
+              style={{ flex: 1, borderRadius: 19, backgroundColor: card.bg, padding: 14, overflow: "hidden", minHeight: 126, ...subCardShadow }}
+            >
+              <MaterialCommunityIcons
+                name={card.icon}
+                size={62}
+                color={card.color}
+                style={{ position: "absolute", right: -4, bottom: 0, opacity: 0.23 }}
+              />
+              <Text style={{ color: "#0f172a", fontSize: 13.5, lineHeight: 17, fontWeight: "900" }}>{card.title}</Text>
+              <Text style={{ marginTop: 6, color: card.color, fontSize: 11, fontWeight: "900" }}>{card.sub}</Text>
+              <View style={{ alignSelf: "flex-start", marginTop: 16, borderRadius: 999, backgroundColor: card.color, paddingHorizontal: 11, paddingVertical: 6 }}>
+                <Text style={{ color: "#fff", fontSize: 9.5, fontWeight: "900" }}>{card.action}</Text>
+              </View>
+            </Pressable>
+          ))}
+        </View>
 
         {false ? (
           <View style={{ paddingHorizontal: 16, marginBottom: 14 }}>
@@ -625,279 +848,43 @@ export default function ShopHomeScreen() {
           </View>
         ) : null}
 
-        <View style={{ marginTop: 12, marginHorizontal: 16, marginBottom: 14, borderRadius: 20, ...bannerCardShadow }}>
-          <View style={{ borderRadius: 20, overflow: "hidden", backgroundColor: slide.bg[1] }}>
-            <LinearGradient
-              colors={[slide.bg[0], slide.bg[1], slide.bg[2]]}
-              locations={[0, 0.52, 1]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{ paddingTop: 14, paddingBottom: 12, paddingHorizontal: 14 }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <View style={{ flex: 1, paddingRight: 10, minWidth: 0 }}>
-                  <Text
-                    style={{
-                      fontSize: 9,
-                      fontWeight: "800",
-                      color: slide.subText,
-                      letterSpacing: 1.1,
-                      opacity: 0.88,
-                    }}
-                  >
-                    {slide.eyebrow.toUpperCase()}
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 17,
-                      fontWeight: "800",
-                      color: slide.text,
-                      marginTop: 3,
-                      letterSpacing: -0.35,
-                      lineHeight: 21,
-                    }}
-                    numberOfLines={2}
-                  >
-                    {slide.title}
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 11,
-                      fontWeight: "600",
-                      color: slide.subText,
-                      marginTop: 3,
-                      opacity: 0.88,
-                      lineHeight: 14,
-                    }}
-                    numberOfLines={1}
-                  >
-                    {slide.subtitle}
-                  </Text>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
-                    <Pressable
-                      onPress={() => openCategory(heroCategoryKey(slide.id))}
-                      style={{ borderRadius: 10, overflow: "hidden" }}
-                    >
-                      <LinearGradient
-                        colors={[...theme.placeOrderGradient]}
-                        start={{ x: 0, y: 0.5 }}
-                        end={{ x: 1, y: 0.5 }}
-                        style={{ paddingHorizontal: 14, paddingVertical: 8 }}
-                      >
-                        <Text style={{ color: "#fff", fontWeight: "800", fontSize: 12 }}>Shop</Text>
-                      </LinearGradient>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => router.push("/cart")}
-                      style={{
-                        backgroundColor: "rgba(255,255,255,0.92)",
-                        paddingHorizontal: 12,
-                        paddingVertical: 8,
-                        borderRadius: 10,
-                        borderWidth: 1,
-                        borderColor: "rgba(0,0,0,0.06)",
-                      }}
-                    >
-                      <Text style={{ color: theme.text, fontWeight: "800", fontSize: 12 }}>Cart</Text>
-                    </Pressable>
-                  </View>
-                </View>
-                <Image
-                  source={{ uri: slide.image }}
-                  style={{
-                    width: SCREEN_W * 0.26,
-                    height: 86,
-                    borderRadius: 12,
-                    borderWidth: 2,
-                    borderColor: "rgba(255,255,255,0.65)",
-                  }}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                />
-              </View>
-
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  gap: 5,
-                  marginTop: 8,
-                }}
-              >
-                {HERO_SLIDES.map((s, i) => (
-                  <Pressable key={s.id} onPress={() => setHeroIndex(i)} hitSlop={8}>
-                    <View
-                      style={{
-                        height: 4,
-                        borderRadius: 2,
-                        width: i === heroIndex ? 18 : 4,
-                        backgroundColor: i === heroIndex ? slide.text : "rgba(255,255,255,0.45)",
-                      }}
-                    />
-                  </Pressable>
-                ))}
-              </View>
-            </LinearGradient>
-          </View>
-        </View>
-
         <View style={{ marginTop: 6, marginBottom: 8 }}>
-          <View style={{ paddingHorizontal: SECTION_PAD, marginBottom: 16 }}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginTop: 0 }}>
-              {bestSelling.slice(0, 8).map((p) => {
-                const img = resolveMediaUrl(p.imageUrl ?? undefined);
-                const price = numPrice(p.price);
-                const mrp = numPrice(p.mrp);
-                return (
-                  <Pressable
-                    key={`best-${p.id}`}
-                    onPress={() => router.push(`/product/${p.id}` as Href)}
-                    style={{
-                      width: 150,
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      borderColor: "#e8eef5",
-                      backgroundColor: theme.bgElevated,
-                      overflow: "hidden",
-                      ...subCardShadow,
-                    }}
-                  >
-                    <View style={{ height: 96, backgroundColor: "#f8fafc", borderBottomWidth: 1, borderBottomColor: "#f1f5f9" }}>
-                      {img ? <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : null}
-                    </View>
-                    <View style={{ padding: 7 }}>
-                      <Text numberOfLines={2} style={{ fontSize: 12, fontWeight: "800", color: theme.text, minHeight: 30 }}>
-                        {p.name}
-                      </Text>
-                      <ProductPriceOfferRow
-                        compact
-                        layout="premiumGrid"
-                        sellingPrice={price}
-                        mrp={mrp}
-                        discountPercent={p.discountPercent}
-                        style={{ marginTop: 4 }}
-                      />
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-
-          <View style={{ paddingHorizontal: 0, marginBottom: 14, marginTop: 4, alignItems: "center" }}>
-            {/* Wider than section inset — extra bleed vs coupons row so heading uses more horizontal space */}
+          <View style={{ paddingHorizontal: 0, marginBottom: 14, marginTop: 22 }}>
             <View
               style={{
-                width: SCREEN_W - SECTION_PAD * 2 + 44,
-                marginHorizontal: -22,
-                alignSelf: "center",
+                paddingHorizontal: SECTION_PAD,
+                flexDirection: "row",
                 alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 10,
               }}
             >
-              <Text
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.9}
-                style={{
-                  fontSize: 17,
-                  fontWeight: "800",
-                  color: "#1D6B32",
-                  letterSpacing: 0.12,
-                  lineHeight: 20,
-                  textAlign: "center",
-                  textTransform: "uppercase",
-                  width: "100%",
-                }}
-              >
-                Deals starting at ₹9
-              </Text>
-              <Text
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.9}
-                style={{
-                  marginTop: 3,
-                  fontSize: 11,
-                  color: "#545E6B",
-                  fontWeight: "400",
-                  textAlign: "center",
-                  lineHeight: 14,
-                  width: "100%",
-                }}
-              >
-                Add Any 5 Items
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
+                <MaterialCommunityIcons name="lightning-bolt" size={20} color="#f59e0b" />
+                <Text style={{ color: "#0f172a", fontSize: 18, fontWeight: "900" }}>Flash Deals</Text>
+              </View>
+              <Pressable onPress={() => router.push("/search" as Href)} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                <Text style={{ color: "#334155", fontSize: 12, fontWeight: "800" }}>View All</Text>
+                <MaterialCommunityIcons name="arrow-right" size={15} color="#334155" />
+              </Pressable>
             </View>
+            {flashDealProducts.length === 0 ? (
+              <Text style={{ paddingHorizontal: SECTION_PAD, color: theme.textMuted, fontWeight: "600", fontSize: 13 }}>
+                Deals will show here once products load for your area.
+              </Text>
+            ) : (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
+              removeClippedSubviews={false}
               style={{
-                marginTop: 10,
                 marginHorizontal: -SECTION_PAD,
-                paddingHorizontal: SECTION_PAD,
-                paddingVertical: 10,
-                backgroundColor: "#f0fdf4",
-                borderTopWidth: 1,
-                borderBottomWidth: 1,
-                borderColor: "#dcfce7",
+                paddingHorizontal: SECTION_PAD + 16,
+                paddingVertical: 4,
               }}
-              contentContainerStyle={{ gap: 8, alignItems: "stretch", paddingRight: 2 }}
+              contentContainerStyle={{ gap: 16, alignItems: "stretch", paddingRight: 20, paddingBottom: 10 }}
             >
-              <View
-                style={{
-                  width: 92,
-                  borderRadius: 14,
-                  borderWidth: 1,
-                  borderColor: "#bbf7d0",
-                  backgroundColor: "#ecfdf5",
-                  paddingVertical: 10,
-                  paddingHorizontal: 8,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  minHeight: 168,
-                  ...bannerCardShadow,
-                }}
-              >
-                <Text
-                  numberOfLines={3}
-                  style={{
-                    color: "#0f172a",
-                    fontSize: 9,
-                    fontWeight: "900",
-                    letterSpacing: 0.45,
-                    textAlign: "center",
-                    lineHeight: 11,
-                  }}
-                >
-                  BEST OF ALL
-                </Text>
-                <View
-                  style={{
-                    marginTop: 8,
-                    backgroundColor: "#166534",
-                    paddingVertical: 7,
-                    paddingHorizontal: 12,
-                    borderRadius: 8,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    minWidth: 70,
-                    ...Platform.select({
-                      ios: {
-                        shadowColor: "#14532d",
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.28,
-                        shadowRadius: 4,
-                      },
-                      android: { elevation: 3 },
-                      default: {},
-                    }),
-                  }}
-                >
-                  <Text style={{ color: "#ffffff", fontSize: 13, fontWeight: "900", letterSpacing: 0.45 }}>DEALS</Text>
-                </View>
-              </View>
-              {DEALS_CAROUSEL_DUMMY.map((p) => {
+              {flashDealProducts.map((p) => {
                 const img = resolveMediaUrl(p.imageUrl ?? undefined);
                 const price = numPrice(p.price);
                 const mrp = numPrice(p.mrp);
@@ -905,34 +892,26 @@ export default function ShopHomeScreen() {
                 return (
                   <Pressable
                     key={`deal-${p.id}`}
-                    onPress={() => {
-                      if (p.id.startsWith("deal-dummy-")) {
-                        Alert.alert("Demo product", "Yeh abhi sample product hai. Real deals jald hi catalog se aayenge.");
-                        return;
-                      }
-                      router.push(`/product/${p.id}` as Href);
-                    }}
+                    onPress={() => router.push(`/product/${p.id}` as Href)}
                     style={{
-                      width: 138,
-                      borderRadius: 14,
-                      borderWidth: 1,
-                      borderColor: "#eef2f6",
-                      backgroundColor: theme.bgElevated,
+                      width: 116,
+                      borderRadius: 16,
+                      borderWidth: 0,
+                      backgroundColor: "#ffffff",
                       overflow: "hidden",
-                      ...dealsCardShadow,
                     }}
                   >
-                    <View style={{ height: 96, backgroundColor: "#f8fafc", borderBottomWidth: 1, borderBottomColor: "#f1f5f9" }}>
+                    <View style={{ height: 96, backgroundColor: "#f8fafc", borderRadius: 15, overflow: "hidden" }}>
                       {img ? <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : null}
                       <View style={{ position: "absolute", right: 6, bottom: 6 }}>
                         <View
                           style={{
-                            width: 32,
-                            height: 28,
-                            borderRadius: 10,
-                            backgroundColor: "#fff",
+                            width: 30,
+                            height: 30,
+                            borderRadius: 15,
+                            backgroundColor: "#2f9e44",
                             borderWidth: 1,
-                            borderColor: "#fda4af",
+                            borderColor: "#ffffff",
                             alignItems: "center",
                             justifyContent: "center",
                             ...Platform.select({
@@ -942,38 +921,25 @@ export default function ShopHomeScreen() {
                             }),
                           }}
                         >
-                          <MaterialCommunityIcons name="plus" size={18} color="#e11d48" />
+                          <MaterialCommunityIcons name="plus" size={19} color="#fff" />
                         </View>
                       </View>
                     </View>
-                    <View style={{ paddingHorizontal: 8, paddingTop: 7, paddingBottom: 9 }}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "nowrap" }}>
-                        <View style={{ borderRadius: 8, backgroundColor: "#16a34a", paddingHorizontal: 7, paddingVertical: 3 }}>
-                          <Text style={{ color: "#fff", fontWeight: "900", fontSize: 14, letterSpacing: 0.15 }}>₹{Math.round(price)}</Text>
-                        </View>
+                    <View style={{ paddingHorizontal: 3, paddingTop: 8, paddingBottom: 6 }}>
+                      <Text numberOfLines={2} ellipsizeMode="tail" style={{ color: theme.text, fontWeight: "800", fontSize: 11.5, lineHeight: 14.5, minHeight: 29 }}>
+                        {p.name}
+                      </Text>
+                      <View style={{ flexDirection: "row", alignItems: "baseline", gap: 5, flexWrap: "nowrap", marginTop: 5 }}>
+                        <Text style={{ color: "#0f172a", fontWeight: "900", fontSize: 14 }}>₹{Math.round(price)}</Text>
                         {mrp > price ? (
-                          <Text style={{ color: "#94a3b8", fontWeight: "700", fontSize: 11, textDecorationLine: "line-through" }}>₹{Math.round(mrp)}</Text>
+                          <Text style={{ color: "#94a3b8", fontWeight: "700", fontSize: 10.5, textDecorationLine: "line-through" }}>₹{Math.round(mrp)}</Text>
                         ) : null}
                       </View>
                       {offAmt > 0 ? (
-                        <>
-                          <Text style={{ color: "#15803d", fontWeight: "900", fontSize: 12, marginTop: 4 }}>₹{offAmt} OFF</Text>
-                          <View
-                            style={{
-                              marginTop: 5,
-                              borderTopWidth: 1,
-                              borderColor: "rgba(148,163,184,0.55)",
-                              borderStyle: "dashed",
-                              width: "100%",
-                            }}
-                          />
-                        </>
+                        <Text style={{ color: "#15803d", fontWeight: "900", fontSize: 10.5, marginTop: 3 }}>{Math.round((offAmt / Math.max(mrp, 1)) * 100)}% OFF</Text>
                       ) : null}
-                      <Text numberOfLines={2} ellipsizeMode="tail" style={{ color: theme.text, fontWeight: "800", fontSize: 12, lineHeight: 15, marginTop: 6 }}>
-                        {p.name}
-                      </Text>
                       {!!p.unitLabel && (
-                        <Text numberOfLines={1} style={{ color: theme.textMuted, fontWeight: "600", fontSize: 10, marginTop: 3 }}>
+                        <Text numberOfLines={1} style={{ color: theme.textMuted, fontWeight: "600", fontSize: 9.5, marginTop: 3 }}>
                           {p.unitLabel}
                         </Text>
                       )}
@@ -982,241 +948,283 @@ export default function ShopHomeScreen() {
                 );
               })}
             </ScrollView>
+            )}
           </View>
 
-          <Text
+          <LinearGradient
+            colors={["#f3e8ff", "#ede9fe", "#f5d0fe"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
             style={{
-              fontSize: 18,
-              fontWeight: "900",
-              color: theme.text,
-              marginBottom: 10,
-              letterSpacing: -0.2,
-              paddingHorizontal: SECTION_PAD,
-            }}
-          >
-            Shop by category
-          </Text>
-
-          <View
-            style={{
+              marginHorizontal: SECTION_PAD,
+              marginBottom: 14,
+              borderRadius: 22,
+              paddingHorizontal: 16,
+              paddingVertical: 17,
+              overflow: "hidden",
               flexDirection: "row",
-              flexWrap: "wrap",
-              justifyContent: "space-between",
-              paddingHorizontal: CATEGORY_GRID_PAD,
-              marginBottom: 8,
+              alignItems: "center",
+              ...bannerCardShadow,
             }}
           >
-            {mains.map((m, i) => {
-              const img = previewMainCategoryImage(m);
-              const n = m.subcategories.length;
-              const subLabel = n === 1 ? "1 subcategory" : `${n} subcategories`;
-              return (
-                <Pressable
-                  key={m.id}
-                  onPress={() => openCategory(m.key)}
-                  style={{
-                    width: categoryTileW,
-                    marginBottom: CATEGORY_GRID_GAP,
-                  }}
-                >
+            <MaterialCommunityIcons
+              name="gift-outline"
+              size={86}
+              color="#a855f7"
+              style={{ position: "absolute", right: 8, bottom: -8, opacity: 0.26, transform: [{ rotate: "12deg" }] }}
+            />
+            <View style={{ width: 56, height: 56, borderRadius: 18, backgroundColor: "#7c3aed", alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: "#fff", fontSize: 14, fontWeight: "900" }}>club</Text>
+            </View>
+            <View style={{ flex: 1, marginLeft: 14 }}>
+              <Text style={{ color: "#1e1b4b", fontSize: 16, fontWeight: "900" }}>Join Speedza Club</Text>
+              <Text numberOfLines={1} style={{ marginTop: 4, color: "#5b21b6", fontSize: 11.5, fontWeight: "700" }}>
+                Free delivery · Extra discounts · Early access
+              </Text>
+            </View>
+            <Pressable style={{ borderRadius: 999, backgroundColor: "#111827", paddingHorizontal: 14, paddingVertical: 10 }}>
+              <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900" }}>Join Now</Text>
+            </Pressable>
+          </LinearGradient>
+
+          <View style={{ marginBottom: 14 }}>
+            <View style={{ paddingHorizontal: SECTION_PAD, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <Text style={{ color: "#0f172a", fontSize: 18, fontWeight: "900", letterSpacing: -0.2 }}>
+                Best Selling Products
+              </Text>
+              <Pressable onPress={() => router.push("/search" as Href)} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Text style={{ color: "#475569", fontSize: 12, fontWeight: "800" }}>View All</Text>
+                <MaterialCommunityIcons name="arrow-right" size={16} color="#475569" />
+              </Pressable>
+            </View>
+            {bestSellingRail.length === 0 ? (
+              <Text style={{ paddingHorizontal: SECTION_PAD, color: theme.textMuted, fontWeight: "600", fontSize: 13 }}>
+                Best sellers will appear from your nearby catalog.
+              </Text>
+            ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              removeClippedSubviews={false}
+              style={{ marginHorizontal: -SECTION_PAD, paddingHorizontal: SECTION_PAD + 10, paddingVertical: 2 }}
+              contentContainerStyle={{ gap: 8, paddingRight: 14, paddingBottom: 10, paddingTop: 2 }}
+            >
+              {bestSellingRail.map((p) => {
+                const img = resolveMediaUrl(p.imageUrl ?? undefined);
+                const price = numPrice(p.price);
+                const disc = discountPercentForProduct(p);
+                const cartLine = cartLineFromProductHit(p);
+                return (
                   <View
+                    key={`best-selling-${p.id}`}
                     style={{
-                      borderRadius: 12,
-                      overflow: "hidden",
-                      aspectRatio: 1.02,
-                      backgroundColor: theme.slateLine,
+                      width: HOME_RAIL_CARD_W,
+                      borderRadius: 14,
+                      backgroundColor: "#ffffff",
+                      borderWidth: 1,
+                      borderColor: "#eef2f6",
+                      padding: 8,
+                      ...subCardShadow,
                     }}
                   >
-                    {img ? (
-                      <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
-                    ) : (
-                      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                        <MaterialCommunityIcons name="view-grid-outline" size={34} color={theme.textDim} />
+                    <Pressable onPress={() => router.push(`/product/${p.id}` as Href)}>
+                      <View
+                        style={{
+                          height: HOME_RAIL_IMAGE_H,
+                          borderRadius: 10,
+                          backgroundColor: "#f8fafc",
+                          overflow: "hidden",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {img ? <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : null}
                       </View>
-                    )}
-                    <LinearGradient
-                      colors={["transparent", "rgba(0,0,0,0.78)"]}
-                      locations={[0.4, 1]}
-                      style={{
-                        position: "absolute",
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        paddingTop: 14,
-                        paddingHorizontal: 6,
-                        paddingBottom: 5,
-                      }}
-                    >
-                      <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900" }} numberOfLines={2}>
-                        {m.name}
+                      {disc > 0 ? (
+                        <View style={{ flexDirection: "row", alignItems: "center", alignSelf: "flex-end", gap: 2, marginTop: 4 }}>
+                          <MaterialCommunityIcons name="tag-outline" size={10} color="#15803d" />
+                          <Text style={{ color: "#15803d", fontSize: 9, fontWeight: "900" }}>{disc}% off</Text>
+                        </View>
+                      ) : (
+                        <View style={{ height: 14, marginTop: 4 }} />
+                      )}
+                      <Text numberOfLines={2} style={{ marginTop: 3, color: "#0f172a", fontSize: 10.5, lineHeight: 13, fontWeight: "800", minHeight: 26 }}>
+                        {p.name}
                       </Text>
-                      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 9.5, fontWeight: "700", marginTop: 1 }}>
-                        {subLabel}
+                      <Text numberOfLines={1} style={{ color: "#64748b", fontSize: 9.5, fontWeight: "700", marginTop: 2 }}>
+                        {p.unitLabel ?? p.store?.name ?? ""}
                       </Text>
-                    </LinearGradient>
+                      <Text style={{ color: "#0f172a", fontSize: 13.5, fontWeight: "900", marginTop: 5 }}>₹{Math.round(price)}</Text>
+                    </Pressable>
+                    <View style={{ marginTop: 7 }}>
+                      {cartLine ? (
+                        <CartQtyStepper
+                          line={cartLine}
+                          dense
+                          compact
+                          maxQty={typeof p.stock === "number" ? Math.max(0, p.stock) : 999}
+                          canAdd={typeof p.stock !== "number" || p.stock > 0}
+                        />
+                      ) : (
+                        <Pressable
+                          onPress={() => router.push(`/product/${p.id}` as Href)}
+                          style={{
+                            borderRadius: 10,
+                            backgroundColor: "#f1f5f9",
+                            paddingVertical: 7,
+                            alignItems: "center",
+                          }}
+                        >
+                          <Text style={{ color: "#64748b", fontSize: 10, fontWeight: "800" }}>Open to add</Text>
+                        </Pressable>
+                      )}
+                    </View>
                   </View>
-                </Pressable>
-              );
-            })}
+                );
+              })}
+            </ScrollView>
+            )}
+          </View>
+
+          <View style={{ marginBottom: 14 }}>
+            <View style={{ paddingHorizontal: SECTION_PAD, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <Text style={{ color: "#0f172a", fontSize: 18, fontWeight: "900", letterSpacing: -0.2 }}>
+                More picks for you
+              </Text>
+              <Pressable onPress={() => router.push("/search" as Href)} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Text style={{ color: "#475569", fontSize: 12, fontWeight: "800" }}>View All</Text>
+                <MaterialCommunityIcons name="arrow-right" size={16} color="#475569" />
+              </Pressable>
+            </View>
+            {moreBrowseRail.length === 0 ? (
+              <Text style={{ paddingHorizontal: SECTION_PAD, color: theme.textMuted, fontWeight: "600", fontSize: 13 }}>
+                More products appear as your browse feed fills in.
+              </Text>
+            ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              removeClippedSubviews={false}
+              style={{ marginHorizontal: -SECTION_PAD, paddingHorizontal: SECTION_PAD + 10, paddingVertical: 2 }}
+              contentContainerStyle={{ gap: 8, paddingRight: 14, paddingBottom: 10, paddingTop: 2 }}
+            >
+              {moreBrowseRail.map((p) => {
+                const img = resolveMediaUrl(p.imageUrl ?? undefined);
+                const price = numPrice(p.price);
+                const mrp = numPrice(p.mrp);
+                const cartLine = cartLineFromProductHit(p);
+                return (
+                  <View
+                    key={`more-${p.id}`}
+                    style={{
+                      width: HOME_RAIL_CARD_W,
+                      borderRadius: 14,
+                      backgroundColor: "#ffffff",
+                      borderWidth: 1,
+                      borderColor: "#eef2f6",
+                      padding: 8,
+                      ...subCardShadow,
+                    }}
+                  >
+                    <Pressable onPress={() => router.push(`/product/${p.id}` as Href)}>
+                      <View
+                        style={{
+                          height: HOME_RAIL_IMAGE_H,
+                          borderRadius: 10,
+                          backgroundColor: "#f8fafc",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {img ? <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : null}
+                      </View>
+                      <Text numberOfLines={2} style={{ marginTop: 5, color: "#0f172a", fontSize: 10.5, lineHeight: 13, fontWeight: "800", minHeight: 26 }}>
+                        {p.name}
+                      </Text>
+                      <View style={{ flexDirection: "row", alignItems: "baseline", gap: 5, marginTop: 4 }}>
+                        <Text style={{ color: "#0f172a", fontSize: 13.5, fontWeight: "900" }}>₹{Math.round(price)}</Text>
+                        {mrp > price ? (
+                          <Text style={{ color: "#94a3b8", fontSize: 9.5, fontWeight: "700", textDecorationLine: "line-through" }}>₹{Math.round(mrp)}</Text>
+                        ) : null}
+                      </View>
+                    </Pressable>
+                    <View style={{ marginTop: 7 }}>
+                      {cartLine ? (
+                        <CartQtyStepper
+                          line={cartLine}
+                          dense
+                          compact
+                          maxQty={typeof p.stock === "number" ? Math.max(0, p.stock) : 999}
+                          canAdd={typeof p.stock !== "number" || p.stock > 0}
+                        />
+                      ) : (
+                        <Pressable
+                          onPress={() => router.push(`/product/${p.id}` as Href)}
+                          style={{
+                            borderRadius: 10,
+                            backgroundColor: "#f1f5f9",
+                            paddingVertical: 7,
+                            alignItems: "center",
+                          }}
+                        >
+                          <Text style={{ color: "#64748b", fontSize: 10, fontWeight: "800" }}>Open to add</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+            )}
+          </View>
+
+          <View style={{ marginHorizontal: SECTION_PAD, marginBottom: 14, borderRadius: 18, backgroundColor: "#ffffff", borderWidth: 1, borderColor: "#eef2f6", paddingVertical: 13, flexDirection: "row" }}>
+            {[
+              { icon: "shield-check-outline" as const, title: "100% Secure", sub: "Your data is safe with us" },
+              { icon: "credit-card-check-outline" as const, title: "Multiple Payments", sub: "UPI, Cards, Wallets & COD" },
+              { icon: "headphones" as const, title: "24/7 Support", sub: "We are always here to help" },
+            ].map((item, index) => (
+              <View key={item.title} style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: 8, borderLeftWidth: index === 0 ? 0 : 1, borderLeftColor: "#e2e8f0" }}>
+                <MaterialCommunityIcons name={item.icon} size={24} color="#2f9e44" />
+                <View style={{ flex: 1 }}>
+                  <Text numberOfLines={1} style={{ color: "#0f172a", fontSize: 10.5, fontWeight: "900" }}>{item.title}</Text>
+                  <Text numberOfLines={1} style={{ color: "#64748b", fontSize: 8.8, fontWeight: "700" }}>{item.sub}</Text>
+                </View>
+              </View>
+            ))}
           </View>
 
           {mains.map((m) => {
             const k = normMainKey(m.key);
-            if (isFashionMainCategory(m.key)) {
-              const cards = m.subcategories.slice(0, 4).map((sub) => {
-                const cname = normText(sub.name);
-                const hits = fashionProducts.filter((p) => normText(p.categoryName ?? "") === cname);
-                const min = hits
-                  .map((p) => numPrice(p.price))
-                  .filter((n) => n > 0)
-                  .sort((a, b) => a - b)[0];
-                const img = hits.find((p) => p.imageUrl?.trim())?.imageUrl ?? (sub.imageUrl?.trim() ? resolveMediaUrl(sub.imageUrl) : null);
-                return {
-                  sub,
-                  startsAt: min ? Math.round(min) : null,
-                  imageUrl: img,
-                };
-              });
-              const hero = (() => {
-                const priced = fashionProducts
-                  .map((p) => ({ ...p, p: numPrice(p.price) }))
-                  .filter((p) => p.p > 0)
-                  .sort((a, b) => a.p - b.p);
-                const pick = priced[0] ?? null;
-                if (!pick) return null;
-                return { imageUrl: pick.imageUrl ?? null, price: Math.round(pick.p) };
-              })();
-
-              return (
-                <View key={`${m.id}-fashionfest`} style={{ marginBottom: 22, marginHorizontal: SECTION_PAD }}>
-                  <View
-                    style={{
-                      borderRadius: 24,
-                      backgroundColor: "#5b21b6",
-                      padding: 10,
-                    }}
-                  >
-                    <View style={{ borderRadius: 16, backgroundColor: "#ede9fe", padding: 10 }}>
-                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-                        <View style={{ flex: 1, minWidth: 0 }}>
-                          <Text
-                            style={{
-                              alignSelf: "flex-start",
-                              backgroundColor: "#e11d74",
-                              color: "#fff",
-                              fontWeight: "900",
-                              fontSize: 11,
-                              paddingHorizontal: 10,
-                              paddingVertical: 5,
-                              borderRadius: 8,
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            Summer Edit
-                          </Text>
-                          <Text style={{ marginTop: 6, color: "#0f766e", fontSize: 16, fontWeight: "900", textTransform: "uppercase" }}>
-                            Up to 85% off
-                          </Text>
-                          <Text style={{ marginTop: 2, color: "#0f766e", fontSize: 36, fontWeight: "900", lineHeight: 40 }}>
-                            FASHION FEST
-                          </Text>
-                        </View>
-                        <View style={{ flexDirection: "row", gap: 6, marginLeft: 8 }}>
-                          {cards
-                            .map((x) => x.imageUrl)
-                            .filter((v): v is string => Boolean(v))
-                            .slice(0, 2)
-                            .map((src, i) => (
-                              <View
-                                key={`${src}-${i}`}
-                                style={{
-                                  width: 68,
-                                  height: 92,
-                                  borderRadius: 10,
-                                  borderWidth: 3,
-                                  borderColor: "#fff",
-                                  overflow: "hidden",
-                                  transform: [{ rotate: i === 0 ? "-8deg" : "8deg" }],
-                                  backgroundColor: "#fde68a",
-                                }}
-                              >
-                                <Image source={{ uri: src }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
-                              </View>
-                            ))}
-                        </View>
-                      </View>
-
-                      <View style={{ marginTop: 10, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
-                          {[0, 1, 2, 3].map((idx) => {
-                            const row = cards[idx];
-                            if (!row) return null;
-                            return (
-                              <Pressable
-                                key={row.sub.id}
-                                onPress={() => openSubcategory(m.key, row.sub)}
-                                style={{
-                                  width: "49%",
-                                  borderRadius: 14,
-                                  backgroundColor: "#fff",
-                                  borderWidth: 1,
-                                  borderColor: "#e5e7eb",
-                                  overflow: "hidden",
-                                  marginBottom: 8,
-                                }}
-                              >
-                                <Text numberOfLines={1} style={{ paddingHorizontal: 10, paddingTop: 8, paddingBottom: 6, fontSize: 16, fontWeight: "900", color: "#292524" }}>
-                                  {row.sub.name} & More
-                                </Text>
-                                <View style={{ height: 74, backgroundColor: "#f3f4f6" }}>
-                                  {row.imageUrl ? (
-                                    <Image source={{ uri: row.imageUrl }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
-                                  ) : null}
-                                </View>
-                                <View style={{ backgroundColor: "#0f766e", paddingHorizontal: 10, paddingVertical: 5 }}>
-                                  <Text style={{ color: "#fff", fontWeight: "900", fontSize: 14 }}>
-                                    Starting @ ₹{row.startsAt ?? 99}
-                                  </Text>
-                                </View>
-                              </Pressable>
-                            );
-                          })}
-                      </View>
-                    </View>
-                  </View>
-                </View>
-              );
-            }
             const featured =
               k.includes("daily") ||
               k.includes("essential") ||
-              k.includes("food") ||
               k.includes("personal") ||
               k.includes("beauty") ||
               k.includes("care");
             if (featured) {
               const th = featuredTheme(m.key);
               return (
-                <View key={`${m.id}-featured`} style={{ marginBottom: 22, marginHorizontal: SECTION_PAD }}>
+                <View key={`${m.id}-featured`} style={{ marginBottom: 16, marginHorizontal: SECTION_PAD }}>
                   <LinearGradient
                     colors={[...th.shell]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={{
-                      borderRadius: 24,
+                      borderRadius: 20,
                       borderWidth: 1.5,
                       borderColor: th.border,
-                      paddingTop: 14,
-                      paddingBottom: 14,
+                      paddingTop: 10,
+                      paddingBottom: 10,
                     }}
                   >
-                    <View style={{ paddingHorizontal: 14 }}>
+                    <View style={{ paddingHorizontal: 12 }}>
                       <Text
-                        style={{ marginTop: 10, fontSize: 20, fontWeight: "900", color: th.title, letterSpacing: -0.5 }}
+                        style={{ marginTop: 6, fontSize: 17, fontWeight: "900", color: th.title, letterSpacing: -0.4 }}
                         numberOfLines={1}
                       >
                         {m.name}
                       </Text>
-                      <Text style={{ marginTop: 3, fontSize: 16 / 1.2, fontWeight: "600", color: th.sub }} numberOfLines={1}>
+                      <Text style={{ marginTop: 2, fontSize: 11.5, fontWeight: "600", color: th.sub }} numberOfLines={1}>
                         Handpicked seasonal finds
                       </Text>
                     </View>
@@ -1224,15 +1232,15 @@ export default function ShopHomeScreen() {
                     <ScrollView
                       horizontal
                       showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={{ paddingLeft: 14, paddingRight: 10, paddingTop: 14 }}
+                      contentContainerStyle={{ paddingLeft: 12, paddingRight: 10, paddingTop: 10 }}
                       decelerationRate="fast"
                     >
                       {m.subcategories.map((sub, idx) => {
                         const thumb = sub.imageUrl?.trim() ? resolveMediaUrl(sub.imageUrl) : undefined;
                         return (
-                          <View key={sub.id} style={{ width: 128, marginRight: idx === m.subcategories.length - 1 ? 0 : 9 }}>
+                          <View key={sub.id} style={{ width: 108, marginRight: idx === m.subcategories.length - 1 ? 0 : 8 }}>
                             <Pressable onPress={() => openSubcategory(m.key, sub)}>
-                              <View style={{ borderRadius: 16, overflow: "hidden", backgroundColor: "#fff", borderWidth: 1, borderColor: "#e5e7eb" }}>
+                              <View style={{ borderRadius: 14, overflow: "hidden", backgroundColor: "#fff", borderWidth: 1, borderColor: "#e5e7eb" }}>
                                 <View style={{ width: "100%", aspectRatio: 1 }}>
                                   {thumb ? (
                                     <Image
@@ -1246,24 +1254,24 @@ export default function ShopHomeScreen() {
                                       <MaterialCommunityIcons name="tag-outline" size={28} color={theme.textDim} />
                                     </View>
                                   )}
-                                  <View style={{ position: "absolute", left: 8, top: 8, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 8, paddingVertical: 3 }}>
-                                    <Text style={{ fontSize: 10, fontWeight: "900", color: "#111827" }}>MUST TRY</Text>
+                                  <View style={{ position: "absolute", left: 6, top: 6, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 6, paddingVertical: 2 }}>
+                                    <Text style={{ fontSize: 8, fontWeight: "900", color: "#111827" }}>MUST TRY</Text>
                                   </View>
-                                  <View style={{ position: "absolute", right: 8, bottom: 8, borderRadius: 999, backgroundColor: "rgba(17,24,39,0.72)", paddingHorizontal: 10, paddingVertical: 4 }}>
-                                    <Text style={{ fontSize: 12, fontWeight: "900", color: "#fff" }}>OPEN</Text>
+                                  <View style={{ position: "absolute", right: 6, bottom: 6, borderRadius: 999, backgroundColor: "rgba(17,24,39,0.72)", paddingHorizontal: 8, paddingVertical: 3 }}>
+                                    <Text style={{ fontSize: 10, fontWeight: "900", color: "#fff" }}>OPEN</Text>
                                   </View>
                                 </View>
-                                <Text numberOfLines={2} style={{ minHeight: 42, paddingHorizontal: 9, paddingVertical: 7, fontSize: 13.5, fontWeight: "800", color: "#111827" }}>
+                                <Text numberOfLines={2} style={{ minHeight: 36, paddingHorizontal: 8, paddingVertical: 6, fontSize: 11.5, fontWeight: "800", color: "#111827", lineHeight: 14 }}>
                                   {sub.name}
                                 </Text>
                               </View>
                             </Pressable>
                             <Pressable
                               onPress={() => openSubcategory(m.key, sub)}
-                              style={{ marginTop: 7, borderRadius: 999, backgroundColor: "#dc2626", paddingVertical: 7, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+                              style={{ marginTop: 6, borderRadius: 999, backgroundColor: "#dc2626", paddingVertical: 6, paddingHorizontal: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
                             >
-                              <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900" }}>Browse products</Text>
-                              <MaterialCommunityIcons name="chevron-right" size={16} color="#fff" />
+                              <Text style={{ color: "#fff", fontSize: 9.5, fontWeight: "900" }}>Browse</Text>
+                              <MaterialCommunityIcons name="chevron-right" size={14} color="#fff" />
                             </Pressable>
                           </View>
                         );
@@ -1272,7 +1280,7 @@ export default function ShopHomeScreen() {
 
                     <Pressable
                       onPress={() => openCategory(m.key)}
-                      style={{ marginHorizontal: 14, marginTop: 14, borderRadius: 999, backgroundColor: "#10b981", paddingHorizontal: 14, paddingVertical: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+                      style={{ marginHorizontal: 12, marginTop: 10, borderRadius: 999, backgroundColor: "#10b981", paddingHorizontal: 12, paddingVertical: 9, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
                     >
                       <View style={{ flexDirection: "row", marginRight: 12 }}>
                         {m.subcategories.slice(0, 3).map((sub, i) => {
@@ -1281,9 +1289,9 @@ export default function ShopHomeScreen() {
                             <View
                               key={sub.id}
                               style={{
-                                width: 30,
-                                height: 30,
-                                borderRadius: 15,
+                                width: 24,
+                                height: 24,
+                                borderRadius: 12,
                                 overflow: "hidden",
                                 borderWidth: 2,
                                 borderColor: "#fff",
@@ -1298,10 +1306,10 @@ export default function ShopHomeScreen() {
                           );
                         })}
                       </View>
-                      <Text style={{ flex: 1, textAlign: "center", fontSize: 15, fontWeight: "900", color: "#fff" }}>
+                      <Text style={{ flex: 1, textAlign: "center", fontSize: 12, fontWeight: "900", color: "#fff" }}>
                         See all subcategories
                       </Text>
-                      <MaterialCommunityIcons name="chevron-right" size={22} color="#fff" />
+                      <MaterialCommunityIcons name="chevron-right" size={18} color="#fff" />
                     </Pressable>
                   </LinearGradient>
                 </View>
@@ -1309,20 +1317,20 @@ export default function ShopHomeScreen() {
             }
 
             return (
-              <View key={`${m.id}-subs`} style={{ marginBottom: 22 }}>
+              <View key={`${m.id}-subs`} style={{ marginBottom: 16 }}>
                 <View
                   style={{
                     flexDirection: "row",
                     alignItems: "center",
                     justifyContent: "space-between",
                     paddingHorizontal: SECTION_PAD,
-                    marginBottom: 10,
+                    marginBottom: 8,
                   }}
                 >
                   <Text
                     style={{
                       flex: 1,
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: "900",
                       color: theme.text,
                       letterSpacing: -0.3,
@@ -1337,8 +1345,8 @@ export default function ShopHomeScreen() {
                     style={{ flexDirection: "row", alignItems: "center" }}
                     hitSlop={8}
                   >
-                    <Text style={{ color: theme.primary, fontWeight: "800", fontSize: 13 }}>See all</Text>
-                    <MaterialCommunityIcons name="chevron-right" size={20} color={theme.primary} />
+                    <Text style={{ color: theme.primary, fontWeight: "800", fontSize: 12 }}>See all</Text>
+                    <MaterialCommunityIcons name="chevron-right" size={18} color={theme.primary} />
                   </Pressable>
                 </View>
                 {m.subcategories.length === 0 ? null : (
@@ -1356,16 +1364,16 @@ export default function ShopHomeScreen() {
                           onPress={() => openSubcategory(m.key, sub)}
                           style={{
                             width: SUB_CARD_W,
-                            marginRight: idx === m.subcategories.length - 1 ? 0 : 12,
+                            marginRight: idx === m.subcategories.length - 1 ? 0 : 9,
                           }}
                         >
                           <View
                             style={{
                               backgroundColor: theme.bgElevated,
-                              borderRadius: 14,
+                              borderRadius: 12,
                               borderWidth: 1,
                               borderColor: theme.border,
-                              padding: 8,
+                              padding: 6,
                               ...subCardShadow,
                             }}
                           >
@@ -1373,7 +1381,7 @@ export default function ShopHomeScreen() {
                               style={{
                                 width: "100%",
                                 aspectRatio: 1,
-                                borderRadius: 12,
+                                borderRadius: 10,
                                 overflow: "hidden",
                                 backgroundColor: theme.slateLine,
                               }}
@@ -1387,18 +1395,18 @@ export default function ShopHomeScreen() {
                                 />
                               ) : (
                                 <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                                  <MaterialCommunityIcons name="tag-outline" size={28} color={theme.textDim} />
+                                  <MaterialCommunityIcons name="tag-outline" size={24} color={theme.textDim} />
                                 </View>
                               )}
                             </View>
                             <Text
                               numberOfLines={2}
                               style={{
-                                marginTop: 8,
-                                fontSize: 12,
+                                marginTop: 6,
+                                fontSize: 10.5,
                                 fontWeight: "800",
                                 color: theme.text,
-                                lineHeight: 15,
+                                lineHeight: 13,
                                 textAlign: "center",
                               }}
                             >
@@ -1414,7 +1422,7 @@ export default function ShopHomeScreen() {
             );
           })}
 
-          <View style={{ paddingHorizontal: SECTION_PAD, marginBottom: 18 }}>
+          <View style={{ paddingHorizontal: SECTION_PAD, marginBottom: 14 }}>
             <Text style={{ fontSize: 15, fontWeight: "900", color: theme.text, marginBottom: 8, letterSpacing: -0.3 }}>
               Coupons & Offers
             </Text>

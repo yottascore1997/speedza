@@ -34,10 +34,15 @@ import {
 
 const LOGIN_BG = require("../public/images/loginbg.jpeg");
 
-// Temporary Play review login: keep this on while Firebase/SMS OTP is blocking review.
-// Set to false to restore the real Firebase phone OTP path below.
-const DEMO_APP_OTP_LOGIN = true;
-const DEMO_APP_OTP_CODE = "123456";
+/** Only this number uses `/api/auth/verify-otp` with fixed code; all others use Firebase → `/api/auth/firebase`. */
+const DUMMY_OTP_PHONE10 = "9420413822";
+const DUMMY_OTP_CODE = "123456";
+
+function isDummyOtpPhone10(raw: string) {
+  const digits = raw.replace(/\D/g, "");
+  const phone10 = digits.length >= 10 ? digits.slice(-10) : digits;
+  return phone10 === DUMMY_OTP_PHONE10;
+}
 
 async function registerPush() {
   try {
@@ -100,11 +105,11 @@ export default function LoginScreen() {
         Alert.alert("Invalid phone", "Please enter a valid 10-digit mobile number.");
         return;
       }
-      if (DEMO_APP_OTP_LOGIN) {
+      if (isDummyOtpPhone10(phone)) {
         setConfirm(null);
         setOtp("");
         setStep(2);
-        Alert.alert("Demo OTP enabled", `Use ${DEMO_APP_OTP_CODE} to continue.`);
+        Alert.alert("Test login", `Use OTP ${DUMMY_OTP_CODE} for this number.`);
         return;
       }
       const digits = phone.replace(/\D/g, "");
@@ -153,7 +158,7 @@ export default function LoginScreen() {
 
   async function verify() {
     const code = otp.replace(/\s/g, "");
-    if (!DEMO_APP_OTP_LOGIN) {
+    if (!isDummyOtpPhone10(phone)) {
       if (Platform.OS === "web" && !confirm) {
         Alert.alert("Session expired", "Please request OTP again.");
         setStep(1);
@@ -181,7 +186,7 @@ export default function LoginScreen() {
         error?: string;
         status: number;
       };
-      if (DEMO_APP_OTP_LOGIN) {
+      if (isDummyOtpPhone10(phone)) {
         res = await api<{
           token: string;
           needsProfile?: boolean;
@@ -359,12 +364,13 @@ export default function LoginScreen() {
           </>
         )}
 
-        {!DEMO_APP_OTP_LOGIN && Platform.OS !== "web" && !nativeFirebaseCfg && step === 1 ? (
+        {!isDummyOtpPhone10(phone) && Platform.OS !== "web" && !nativeFirebaseCfg && step === 1 ? (
           <Text style={styles.configWarn}>
-            Sign-in is not available on this build. Install an updated release or contact support.
+            Sign-in is not available on this build (except test number {DUMMY_OTP_PHONE10}). Install an updated release or
+            contact support.
           </Text>
         ) : null}
-        {!DEMO_APP_OTP_LOGIN && Platform.OS !== "web" && nativeFirebaseCfg && !bridgeReady && step === 1 ? (
+        {!isDummyOtpPhone10(phone) && Platform.OS !== "web" && nativeFirebaseCfg && !bridgeReady && step === 1 ? (
           <Text style={styles.configWarn}>
             Initializing secure login... Please wait 2-3 seconds, then tap Send OTP.
           </Text>
@@ -383,7 +389,7 @@ export default function LoginScreen() {
             <Pressable
               disabled={
                 loading ||
-                (!DEMO_APP_OTP_LOGIN &&
+                (!isDummyOtpPhone10(phone) &&
                   Platform.OS !== "web" &&
                   (!nativeFirebaseCfg || !bridgeReady))
               }
@@ -528,8 +534,8 @@ export default function LoginScreen() {
       <View style={{ paddingBottom: bottomPad }}>
         {cardInner}
         <Text style={styles.footerNote}>
-          {DEMO_APP_OTP_LOGIN
-            ? `Demo OTP enabled: ${DEMO_APP_OTP_CODE}`
+          {isDummyOtpPhone10(phone)
+            ? `Test number: OTP ${DUMMY_OTP_CODE}`
             : "Secured with Firebase phone verification"}
         </Text>
       </View>
@@ -547,7 +553,7 @@ export default function LoginScreen() {
             style: { position: "fixed", left: -9999, width: 1, height: 1, overflow: "hidden" },
           })
         : null}
-      {!DEMO_APP_OTP_LOGIN && Platform.OS !== "web" && nativeFirebaseCfg ? (
+      {Platform.OS !== "web" && nativeFirebaseCfg ? (
         <FirebasePhoneAuthWebView
           ref={authBridgeRef}
           firebaseConfig={nativeFirebaseCfg}

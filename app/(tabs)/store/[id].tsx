@@ -99,10 +99,10 @@ function StoreMenuSkeleton() {
         borderColor: LINE,
         padding: 14,
         flexDirection: "row",
-        gap: 14,
+        gap: 12,
       }}
     >
-      <View style={{ width: 124, height: 124, borderRadius: 16, backgroundColor: "#e7e5e4" }} />
+      <View style={{ width: 112, height: 112, borderRadius: 14, backgroundColor: "#e7e5e4" }} />
       <View style={{ flex: 1, gap: 10 }}>
         <View style={{ width: "88%", height: 16, borderRadius: 8, backgroundColor: "#e7e5e4" }} />
         <View style={{ width: "55%", height: 14, borderRadius: 8, backgroundColor: "#eceae9" }} />
@@ -533,25 +533,25 @@ export default function StoreDetailScreen() {
                             ...cardLift,
                           }}
                         >
-                          <View style={{ flexDirection: "row", padding: 14, gap: 14 }}>
-                            <Pressable onPress={() => router.push(`/product/${p.id}`)} style={{ width: 124 }}>
+                          <View style={{ flexDirection: "row", padding: 14, gap: 12, alignItems: "flex-start" }}>
+                            <Pressable onPress={() => router.push(`/product/${p.id}`)} style={{ width: 112, flexShrink: 0 }}>
                               <View
                                 style={{
-                                  width: 124,
-                                  height: 124,
-                                  borderRadius: 16,
+                                  width: 112,
+                                  height: 112,
+                                  borderRadius: 14,
                                   overflow: "hidden",
                                   backgroundColor: "#f5f5f4",
                                   borderWidth: 1,
                                   borderColor: "#e7e5e4",
                                   opacity: inStock ? 1 : 0.88,
-                    }}
-                  >
-                    {img ? (
-                      <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+                                }}
+                              >
+                                {img ? (
+                                  <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
                                 ) : (
                                   <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                                    <MaterialCommunityIcons name="silverware-fork-knife" size={30} color="#d6d3d1" />
+                                    <MaterialCommunityIcons name="silverware-fork-knife" size={28} color="#d6d3d1" />
                                   </View>
                                 )}
                                 {disc > 0 ? (
@@ -559,62 +559,89 @@ export default function StoreDetailScreen() {
                                     style={{
                                       position: "absolute",
                                       top: 6,
-                                      right: 6,
+                                      left: 6,
                                       backgroundColor: "rgba(28,25,22,0.88)",
-                                      paddingHorizontal: 8,
-                                      paddingVertical: 4,
+                                      paddingHorizontal: 7,
+                                      paddingVertical: 3,
                                       borderRadius: 8,
+                                      maxWidth: "72%",
                                     }}
                                   >
-                                    <Text style={{ color: "#fef3c7", fontWeight: "900", fontSize: 10, letterSpacing: 0.2 }}>{disc}% OFF</Text>
+                                    <Text numberOfLines={1} style={{ color: "#fef3c7", fontWeight: "900", fontSize: 9.5, letterSpacing: 0.2 }}>
+                                      {disc}% OFF
+                                    </Text>
                                   </View>
-                    ) : null}
-                  </View>
+                                ) : null}
+                              </View>
                             </Pressable>
                             <View style={{ flex: 1, minWidth: 0 }}>
-                              <Pressable onPress={() => router.push(`/product/${p.id}`)}>
-                                <Text style={{ fontWeight: "900", color: INK, fontSize: 16, lineHeight: 21, letterSpacing: -0.2 }} numberOfLines={2}>
+                              <Pressable onPress={() => router.push(`/product/${p.id}`)} hitSlop={6}>
+                                <Text style={{ fontWeight: "900", color: INK, fontSize: 15.5, lineHeight: 20, letterSpacing: -0.2 }} numberOfLines={2}>
                                   {p.name}
                                 </Text>
                                 {desc.length > 0 ? (
-                                  <Text style={{ marginTop: 4, color: "#78716c", fontSize: 12, fontWeight: "600", lineHeight: 16 }} numberOfLines={2}>
+                                  <Text
+                                    style={{ marginTop: 5, color: "#78716c", fontSize: 12, fontWeight: "600", lineHeight: 16.5 }}
+                                    numberOfLines={3}
+                                    ellipsizeMode="tail"
+                                  >
                                     {desc}
-                    </Text>
+                                  </Text>
                                 ) : null}
-                    {p.unitLabel ? (
+                                {p.unitLabel ? (
                                   <View
                                     style={{
                                       alignSelf: "flex-start",
-                                      marginTop: 8,
+                                      marginTop: 7,
                                       backgroundColor: "#fafaf9",
-                                      paddingHorizontal: 9,
-                                      paddingVertical: 4,
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 3,
                                       borderRadius: 8,
                                       borderWidth: 1,
                                       borderColor: LINE,
                                     }}
                                   >
-                                    <Text style={{ color: INK_MUTED, fontWeight: "800", fontSize: 11 }}>{p.unitLabel}</Text>
+                                    <Text numberOfLines={1} style={{ color: INK_MUTED, fontWeight: "800", fontSize: 11 }}>
+                                      {p.unitLabel}
+                                    </Text>
                                   </View>
                                 ) : null}
                               </Pressable>
-                              <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                                <Pressable onPress={() => router.push(`/product/${p.id}`)} style={{ flex: 1, minWidth: 0, paddingRight: 4 }}>
-                                  <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "baseline", gap: 6 }}>
-                                    <Text style={{ fontSize: 17, fontWeight: "900", color: "#15803d", letterSpacing: -0.3 }}>{fmtRupee(price)}</Text>
+
+                              <View
+                                style={{
+                                  marginTop: 12,
+                                  paddingTop: 10,
+                                  borderTopWidth: 1,
+                                  borderTopColor: "#f5f5f4",
+                                  flexDirection: "row",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  gap: 10,
+                                }}
+                              >
+                                <Pressable onPress={() => router.push(`/product/${p.id}`)} style={{ flex: 1, minWidth: 0 }} hitSlop={4}>
+                                  <View style={{ flexDirection: "row", flexWrap: "nowrap", alignItems: "center", gap: 6, minWidth: 0 }}>
+                                    <View style={{ flexShrink: 0 }}>
+                                      <Text style={{ fontSize: 16, fontWeight: "900", color: "#15803d", letterSpacing: -0.3 }}>{fmtRupee(price)}</Text>
+                                    </View>
                                     {mrp > price ? (
-                                      <Text style={{ fontSize: 12, fontWeight: "700", color: "#a8a29e", textDecorationLine: "line-through" }}>
+                                      <Text
+                                        numberOfLines={1}
+                                        ellipsizeMode="tail"
+                                        style={{ flexShrink: 1, minWidth: 0, fontSize: 11.5, fontWeight: "700", color: "#a8a29e", textDecorationLine: "line-through" }}
+                                      >
                                         {fmtRupee(mrp)}
-                      </Text>
-                    ) : null}
-                  </View>
+                                      </Text>
+                                    ) : null}
+                                  </View>
                                   {typeof p.priceMax === "number" && p.priceMax > price && (p.variantOptionsCount ?? 0) > 1 ? (
-                                    <Text style={{ marginTop: 3, fontSize: 10, fontWeight: "700", color: "#78716c" }}>
+                                    <Text style={{ marginTop: 4, fontSize: 10, fontWeight: "700", color: "#78716c" }} numberOfLines={1} ellipsizeMode="tail">
                                       From {fmtRupee(price)} – {fmtRupee(p.priceMax!)}
                                     </Text>
                                   ) : null}
-                </Pressable>
-                                <View style={{ flexShrink: 0, width: 96, alignItems: "flex-end" }}>
+                                </Pressable>
+                                <View style={{ width: 100, flexShrink: 0, alignItems: "stretch" }}>
                                   {inStock ? (
                                     <View
                                       style={{
@@ -623,27 +650,27 @@ export default function StoreDetailScreen() {
                                         borderColor: "#16a34a",
                                         backgroundColor: "#fafaf9",
                                         overflow: "hidden",
-                                        alignSelf: "stretch",
+                                        width: "100%",
                                       }}
                                     >
-                  <CartQtyStepper
-                    compact
+                                      <CartQtyStepper
+                                        compact
                                         dense
-                    addLabel="ADD"
-                    line={{
-                      productId: p.id,
-                      storeId: id!,
-                      name: p.name,
+                                        addLabel="ADD"
+                                        line={{
+                                          productId: p.id,
+                                          storeId: id!,
+                                          name: p.name,
                                           price,
-                      storeName: name,
-                      imageUrl: p.imageUrl ?? null,
+                                          storeName: name,
+                                          imageUrl: p.imageUrl ?? null,
                                           mrp: mrp > price ? mrp : undefined,
-                      discountPercent:
-                        typeof p.discountPercent === "number" && p.discountPercent > 0
-                          ? p.discountPercent
-                          : undefined,
-                    }}
-                    maxQty={p.stock}
+                                          discountPercent:
+                                            typeof p.discountPercent === "number" && p.discountPercent > 0
+                                              ? p.discountPercent
+                                              : undefined,
+                                        }}
+                                        maxQty={p.stock}
                                         canAdd={inStock}
                                       />
                                     </View>
@@ -655,8 +682,8 @@ export default function StoreDetailScreen() {
                                 </View>
                               </View>
                             </View>
-                </View>
-              </View>
+                          </View>
+                        </View>
             );
           })}
         </View>

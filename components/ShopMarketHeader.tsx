@@ -14,13 +14,6 @@ const SHOP_KEY = "__shop__";
 
 const SEARCH_BORDER = "rgba(15, 23, 42, 0.12)";
 const SEARCH_ICON = "#334155";
-const HOME_PROMO_CHIPS = [
-  { label: "Speedza", bg: "#ffffff", text: "#6d28d9" },
-  { label: "50% OFF ZONE", bg: "#111827", text: "#ffffff" },
-  { label: "Super Mall.", bg: "#2563eb", text: "#ffffff" },
-  { label: "Fresh", bg: "#16a34a", text: "#ffffff" },
-] as const;
-
 const headerLift = Platform.select({
   ios: {
     shadowColor: "#000",
@@ -121,41 +114,6 @@ export function ShopMarketHeader({
     };
     return [home, ...mains];
   }, [mains]);
-
-  function findMainKeyByTerms(terms: string[]): string | null {
-    const hit = mains.find((m) => {
-      const hay = `${m.key} ${m.name}`.toLowerCase().replace(/_/g, "-");
-      return terms.some((t) => hay.includes(t));
-    });
-    return hit?.key ?? null;
-  }
-
-  function onPromoChipPress(label: string) {
-    const n = label.toLowerCase();
-    if (n.includes("speedza")) {
-      onShopPress();
-      return;
-    }
-    if (n.includes("fresh")) {
-      const key = findMainKeyByTerms(["fresh", "fruit", "vegetable", "fruits-vegetables"]);
-      if (key) onCategoryPress(key);
-      else onShopPress();
-      return;
-    }
-    if (n.includes("super mall")) {
-      const key = findMainKeyByTerms(["grocery", "daily", "essentials"]);
-      if (key) onCategoryPress(key);
-      else onShopPress();
-      return;
-    }
-    if (n.includes("50%")) {
-      const key = findMainKeyByTerms(["deals", "offers", "sale", "grocery"]);
-      if (key) onCategoryPress(key);
-      else onShopPress();
-      return;
-    }
-    onShopPress();
-  }
 
   const syncCart = useCallback(() => {
     void refreshCartCount(setCartCount);
@@ -455,38 +413,11 @@ export function ShopMarketHeader({
         </View>
       </View>
 
-      <View style={{ paddingHorizontal: rs(12), paddingBottom: rs(5) }}>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: rs(7) }}>
-          {HOME_PROMO_CHIPS.map((chip) => (
-            <Pressable
-              key={chip.label}
-              onPress={() => onPromoChipPress(chip.label)}
-              style={{
-                flex: 1,
-                minWidth: "22%",
-                borderRadius: rs(13),
-                paddingHorizontal: rs(9),
-                minHeight: rs(38),
-                backgroundColor: chip.bg,
-                borderWidth: 1,
-                borderColor: chip.bg === "#ffffff" ? "rgba(15,23,42,0.08)" : "transparent",
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              <Text style={{ color: chip.text, fontWeight: "900", fontSize: rms(10.5), textAlign: "center" }} numberOfLines={2}>
-                {chip.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
-
-      <View style={{ paddingTop: rs(2), paddingBottom: rs(4) }}>
+      <View style={{ paddingTop: rs(4), paddingBottom: rs(6) }}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: rs(10), gap: rs(6), alignItems: "flex-end", paddingBottom: 1 }}
+          contentContainerStyle={{ paddingHorizontal: rs(8), gap: rs(4), alignItems: "flex-end", paddingBottom: 1 }}
         >
           {categories.map((c) => {
             const isHome = c.key === SHOP_KEY;
@@ -506,55 +437,55 @@ export function ShopMarketHeader({
               <Pressable
                 key={c.id}
                 onPress={() => (isHome ? onShopPress() : onCategoryPress(c.key))}
-                style={{ width: rs(66), alignItems: "center", paddingBottom: 1 }}
+                style={{ width: rs(86), alignItems: "center", paddingBottom: 1 }}
               >
                 <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: rs(2), width: "100%" }}>
                   {isHome ? (
                     <Image
                       source={require("../assets/home.png")}
-                      style={{ width: rs(28), height: rs(28), opacity: active ? 1 : 0.72 }}
+                      style={{ width: rs(36), height: rs(36), opacity: active ? 1 : 0.72 }}
                       resizeMode="contain"
                     />
                   ) : isDailyEssentials ? (
                     <Image
                       source={require("../assets/shopping-cart.png")}
-                      style={{ width: rs(28), height: rs(28), opacity: active ? 1 : 0.72 }}
+                      style={{ width: rs(36), height: rs(36), opacity: active ? 1 : 0.72 }}
                       resizeMode="contain"
                     />
                   ) : isFood ? (
                     <Image
                       source={require("../assets/balanced-diet.png")}
-                      style={{ width: rs(28), height: rs(28), opacity: active ? 1 : 0.72 }}
+                      style={{ width: rs(36), height: rs(36), opacity: active ? 1 : 0.72 }}
                       resizeMode="contain"
                     />
                   ) : isPersonalCare ? (
                     <Image
                       source={require("../assets/hair.png")}
-                      style={{ width: rs(28), height: rs(28), opacity: active ? 1 : 0.72 }}
+                      style={{ width: rs(36), height: rs(36), opacity: active ? 1 : 0.72 }}
                       resizeMode="contain"
                     />
                   ) : isHousehold ? (
                     <Image
                       source={require("../assets/household.png")}
-                      style={{ width: rs(28), height: rs(28), opacity: active ? 1 : 0.72 }}
+                      style={{ width: rs(36), height: rs(36), opacity: active ? 1 : 0.72 }}
                       resizeMode="contain"
                     />
                   ) : isSnacks ? (
                     <Image
                       source={require("../assets/snaks.png")}
-                      style={{ width: 33, height: 33, opacity: active ? 1 : 0.72 }}
+                      style={{ width: rs(40), height: rs(40), opacity: active ? 1 : 0.72 }}
                       resizeMode="contain"
                     />
                   ) : isBeverages ? (
                     <Image
                       source={require("../assets/drink.png")}
-                      style={{ width: rs(28), height: rs(28) }}
+                      style={{ width: rs(36), height: rs(36) }}
                       resizeMode="contain"
                     />
                   ) : (
                     <MaterialCommunityIcons
                       name={stripIcon!}
-                      size={rs(26)}
+                      size={rs(34)}
                       color={active ? "#0f172a" : inactiveColor}
                     />
                   )}
@@ -562,12 +493,12 @@ export function ShopMarketHeader({
                     numberOfLines={1}
                     ellipsizeMode="tail"
                     style={{
-                      marginTop: 2,
+                      marginTop: 4,
                       textAlign: "center",
-                      fontSize: rms(9),
+                      fontSize: rms(11.25),
                       fontWeight: active ? "900" : "800",
                       color: active ? "#0f172a" : inactiveColor,
-                      lineHeight: rms(10),
+                      lineHeight: rms(13),
                       width: "100%",
                     }}
                   >
@@ -577,7 +508,7 @@ export function ShopMarketHeader({
                 <View
                   style={{
                     marginTop: 2,
-                    width: active ? rs(28) : 0,
+                    width: active ? rs(38) : 0,
                     height: 2,
                     borderRadius: 2,
                     backgroundColor: active ? "#0f172a" : "transparent",

@@ -63,29 +63,28 @@ export function CategoryPromoBanner({ categorySlug, categoryName, onOrderNow }: 
   const isFood = k.includes("food") || n.includes("food");
   const tone = bannerTone(slug, name, isFood);
   const bannerBg = isFood ? "#7f1d1d" : tone.bottom;
-  const padV = isFood ? 20 : 18;
-  const minH = isFood ? 144 : 128;
-  const compactFood = isFood && width < 370;
-  const foodThumb = compactFood ? 72 : 88;
+  const padV = isFood ? 12 : 10;
+  const minH = isFood ? 108 : 96;
+  const thumb = Math.round(Math.min(76, Math.max(52, width * 0.18)));
 
   return (
-    <View style={{ marginBottom: 16, width: cardW, alignSelf: "center" }}>
+    <View style={{ marginBottom: 12, width: cardW, alignSelf: "center" }}>
       <View
         style={{
-          borderRadius: 20,
+          borderRadius: 16,
           overflow: "hidden",
           borderWidth: isFood ? 1 : 0,
           borderColor: "rgba(234, 88, 12, 0.25)",
         }}
       >
-        <View style={{ height: 36, backgroundColor: bannerBg }} />
+        <View style={{ height: 26, backgroundColor: bannerBg }} />
         <View
           style={{
             position: "relative",
             backgroundColor: bannerBg,
-            minHeight: Math.max(minH - 36, 72),
+            minHeight: Math.max(minH - 26, 56),
             paddingVertical: padV,
-            paddingHorizontal: 16,
+            paddingHorizontal: 12,
           }}
         >
           {isFood ? (
@@ -93,44 +92,59 @@ export function CategoryPromoBanner({ categorySlug, categoryName, onOrderNow }: 
               pointerEvents="none"
               style={{
                 position: "absolute",
-                width: 120,
-                height: 120,
-                borderRadius: 60,
-                backgroundColor: "rgba(255,255,255,0.28)",
-                top: -20,
-                right: -28,
+                width: 88,
+                height: 88,
+                borderRadius: 44,
+                backgroundColor: "rgba(255,255,255,0.22)",
+                top: -14,
+                right: -18,
               }}
             />
           ) : null}
-          <View style={{ flexDirection: compactFood ? "column" : "row", alignItems: compactFood ? "flex-start" : "center" }}>
-            <View style={{ flex: 1, paddingRight: compactFood ? 0 : 8, zIndex: 1, width: "100%" }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+              gap: 10,
+            }}
+          >
+            <View style={{ flex: 1, minWidth: 0, zIndex: 1 }}>
               {isFood ? (
                 <View
                   style={{
                     alignSelf: "flex-start",
                     backgroundColor: "rgba(15,23,42,0.9)",
-                    paddingHorizontal: 8,
-                    paddingVertical: 3,
-                    borderRadius: 6,
-                    marginBottom: 8,
+                    paddingHorizontal: 7,
+                    paddingVertical: 2,
+                    borderRadius: 5,
+                    marginBottom: 6,
                   }}
                 >
-                  <Text style={{ color: "#fde047", fontSize: 10, fontWeight: "900", letterSpacing: 0.8 }}>
-                    SPEEDZA BITES
-                  </Text>
+                  <Text style={{ color: "#fde047", fontSize: 9, fontWeight: "900", letterSpacing: 0.7 }}>SPEEDZA BITES</Text>
                 </View>
               ) : null}
-              <Text style={{ fontSize: isFood ? 21 : 19, fontWeight: "900", color: isFood ? "#ffffff" : "#0f172a", letterSpacing: -0.35 }}>
+              <Text
+                style={{
+                  fontSize: isFood ? 18 : 16,
+                  fontWeight: "900",
+                  color: isFood ? "#ffffff" : "#0f172a",
+                  letterSpacing: -0.3,
+                }}
+                numberOfLines={2}
+              >
                 {headline}
               </Text>
               <Text
                 style={{
-                  marginTop: 6,
-                  fontSize: isFood ? 14 : 13,
+                  marginTop: 4,
+                  fontSize: isFood ? 12.5 : 12,
                   fontWeight: "700",
-                  color: isFood ? "rgba(255,255,255,0.92)" : "#1e293b",
-                  lineHeight: isFood ? 20 : 18,
+                  color: isFood ? "rgba(255,255,255,0.9)" : "#334155",
+                  lineHeight: isFood ? 17 : 16,
                 }}
+                numberOfLines={2}
               >
                 {sub}
               </Text>
@@ -138,59 +152,49 @@ export function CategoryPromoBanner({ categorySlug, categoryName, onOrderNow }: 
                 onPress={onOrderNow}
                 style={{
                   alignSelf: "flex-start",
-                  marginTop: isFood ? 16 : 14,
+                  marginTop: isFood ? 10 : 9,
                   backgroundColor: "#0f172a",
-                  paddingHorizontal: isFood ? 22 : 20,
-                  paddingVertical: isFood ? 11 : 10,
+                  paddingHorizontal: isFood ? 16 : 14,
+                  paddingVertical: isFood ? 8 : 7,
                   borderRadius: 999,
                   flexDirection: "row",
                   alignItems: "center",
                 }}
               >
-                <Text style={{ color: "#fff", fontWeight: "900", fontSize: isFood ? 13 : 12, letterSpacing: 0.3 }}>
+                <Text style={{ color: "#fff", fontWeight: "900", fontSize: isFood ? 11.5 : 11, letterSpacing: 0.25 }}>
                   {isFood ? "Chalo order karein" : "ORDER NOW"}
                 </Text>
-                {isFood ? <Text style={{ color: "#fde047", fontSize: 14, marginLeft: 6 }}>→</Text> : null}
+                {isFood ? <Text style={{ color: "#fde047", fontSize: 13, marginLeft: 5 }}>→</Text> : null}
               </Pressable>
             </View>
-            <View
-              style={{
-                width: foodThumb,
-                height: foodThumb,
-                position: "relative",
-                zIndex: 1,
-                marginTop: compactFood ? 12 : 0,
-                alignSelf: compactFood ? "flex-end" : "auto",
-              }}
-            >
-              <View
-                style={[
-                  {
-                    width: foodThumb,
-                    height: foodThumb,
-                    borderRadius: 16,
-                    overflow: "hidden",
-                    backgroundColor: "rgba(255,255,255,0.35)",
-                    borderWidth: 2,
-                    borderColor: "rgba(255,255,255,0.65)",
-                  },
-                  isFood ? { transform: [{ rotate: "3deg" }] } : {},
-                ]}
-              >
-                <Image source={{ uri: adImage }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
-              </View>
+
+            <View style={{ flexShrink: 0, justifyContent: "center", zIndex: 1 }}>
               <View
                 style={{
-                  position: "absolute",
-                  top: 1,
-                  right: 1,
-                  backgroundColor: "rgba(15,23,42,0.88)",
-                  paddingHorizontal: 6,
-                  paddingVertical: 2,
-                  borderRadius: 4,
+                  width: thumb,
+                  height: thumb,
+                  borderRadius: 14,
+                  overflow: "hidden",
+                  backgroundColor: isFood ? "rgba(255,255,255,0.3)" : "#f1f5f9",
+                  borderWidth: 2,
+                  borderColor: isFood ? "rgba(255,255,255,0.6)" : "#e2e8f0",
+                  ...(isFood ? { transform: [{ rotate: "3deg" }] } : {}),
                 }}
               >
-                <Text style={{ color: "#fff", fontSize: 9, fontWeight: "900" }}>AD</Text>
+                <Image source={{ uri: adImage }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                <View
+                  style={{
+                    position: "absolute",
+                    top: 4,
+                    right: 4,
+                    backgroundColor: "rgba(15,23,42,0.88)",
+                    paddingHorizontal: 5,
+                    paddingVertical: 1,
+                    borderRadius: 4,
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontSize: 8, fontWeight: "900" }}>AD</Text>
+                </View>
               </View>
             </View>
           </View>
