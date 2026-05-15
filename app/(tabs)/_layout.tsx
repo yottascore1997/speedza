@@ -77,21 +77,22 @@ export default function TabsLayout() {
         headerTitleStyle: { fontWeight: "800", fontSize: 15, color: "#ffffff" },
         headerTitleContainerStyle: { paddingVertical: 0 },
         headerShadowVisible: false,
-        tabBarActiveTintColor: theme.brandNavOrange,
-        tabBarInactiveTintColor: "#6b7280",
+        tabBarActiveTintColor: "#2f9e44",
+        tabBarInactiveTintColor: "#64748b",
         tabBarStyle: {
-          backgroundColor: theme.tabBarBg,
+          backgroundColor: "#ffffff",
           borderTopWidth: 1,
-          borderTopColor: theme.tabBarBorder,
-          elevation: 16,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -4 },
+          borderTopColor: "#eef2f6",
+          elevation: 18,
+          shadowColor: "#0f172a",
+          shadowOffset: { width: 0, height: -6 },
           shadowOpacity: 0.08,
-          shadowRadius: 12,
-          paddingTop: 6,
-          paddingBottom: 6,
+          shadowRadius: 16,
+          paddingTop: 8,
+          paddingBottom: 8,
+          height: 70,
         },
-        tabBarLabelStyle: { fontWeight: "700", fontSize: 10, marginTop: -2 },
+        tabBarLabelStyle: { fontWeight: "800", fontSize: 10, marginTop: -1 },
         tabBarIconStyle: { marginBottom: -2 },
         tabBarBadgeStyle: {
           backgroundColor: theme.badgeRed,
@@ -124,15 +125,34 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="cart"
         options={{
-          title: "Cart",
+          title: "Quick\nReorder",
           headerShown: false,
           tabBarBadge: badge,
           tabBarIcon: ({ size }) => (
-            <Image
-              source={require("../../assets/trolley.png")}
-              style={{ width: size + 4, height: size + 4 }}
-              resizeMode="contain"
-            />
+            <View
+              style={{
+                width: 54,
+                height: 54,
+                borderRadius: 27,
+                backgroundColor: "#2f9e44",
+                alignItems: "center",
+                justifyContent: "center",
+                marginTop: -22,
+                borderWidth: 4,
+                borderColor: "#ffffff",
+                elevation: 8,
+                shadowColor: "#14532d",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.2,
+                shadowRadius: 10,
+              }}
+            >
+              <Image
+                source={require("../../assets/trolley.png")}
+                style={{ width: size + 8, height: size + 8 }}
+                resizeMode="contain"
+              />
+            </View>
           ),
         }}
       />
