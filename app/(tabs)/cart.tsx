@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert, Modal } from "react-native";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Modal } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
@@ -11,6 +11,7 @@ import { theme } from "@/lib/theme";
 import { resolveMediaUrl } from "@/lib/assets";
 import { CommonShopHeader } from "@/components/CommonShopHeader";
 import { deliveryFeeForSubtotal, FREE_DELIVERY_MIN_SUBTOTAL } from "@/lib/free-delivery";
+import { premiumAlert } from "@/lib/premiumAlert";
 
 const QTY_ORANGE = "#1d4ed8";
 const CART_LINE_IMAGE = 80;
@@ -185,7 +186,7 @@ export default function CartScreen() {
   async function checkout() {
     const token = await getToken();
     if (!token) {
-      Alert.alert("Login required", "Please sign in to place an order.", [
+      premiumAlert("Login required", "Please sign in to place an order.", [
         { text: "Cancel", style: "cancel" },
         { text: "Sign in", onPress: () => router.push("/login") },
       ]);
@@ -206,7 +207,7 @@ export default function CartScreen() {
     });
     setSubmitting(false);
     if (!res.ok) {
-      Alert.alert("Error", res.error || "Order failed");
+      premiumAlert("Error", res.error || "Order failed");
       return;
     }
     const oid = res.data?.order.id ?? "";

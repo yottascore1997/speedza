@@ -4,12 +4,12 @@ import {
   Text,
   FlatList,
   RefreshControl,
-  Alert,
   Pressable,
   Modal,
   ScrollView,
   ActivityIndicator,
 } from "react-native";
+import { premiumAlert } from "@/lib/premiumAlert";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
@@ -128,7 +128,7 @@ export default function OrdersScreen() {
       setLoading(true);
       const res = await api<{ orders: OrderRow[] }>("/api/orders/user?limit=40");
       if (res.ok && res.data) setOrders(res.data.orders);
-      else if (!res.ok) Alert.alert("Error", res.error || "Failed");
+      else if (!res.ok) premiumAlert("Error", res.error || "Failed");
     } finally {
       setLoading(false);
     }
@@ -156,7 +156,7 @@ export default function OrdersScreen() {
   );
 
   async function requestCancelOrder(order: OrderRow) {
-    Alert.alert(
+    premiumAlert(
       "Cancel this order?",
       "Only works while the store hasn’t started preparing it (within 15 minutes of placing). Stock will be released back to the store.",
       [
@@ -178,12 +178,12 @@ export default function OrdersScreen() {
     });
     setCancelLoading(false);
     if (!res.ok) {
-      Alert.alert("Could not cancel", res.error || "Please try again or contact the store.");
+      premiumAlert("Could not cancel", res.error || "Please try again or contact the store.");
       return;
     }
     setActiveOrder(null);
     await load();
-    Alert.alert("Order cancelled", "Your order was cancelled successfully.");
+    premiumAlert("Order cancelled", "Your order was cancelled successfully.");
   }
 
   return (

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Platform,
   Pressable,
@@ -12,6 +11,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
+import { premiumAlert } from "@/lib/premiumAlert";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -74,13 +74,13 @@ export function QuickGroceryOrderSection({
   async function pickImage() {
     const token = await getToken();
     if (!token) {
-      Alert.alert("Sign in required", "Please login first to upload your grocery list.");
+      premiumAlert("Sign in required", "Please login first to upload your grocery list.");
       router.push("/login");
       return;
     }
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Permission needed", "Allow gallery access to upload list photo.");
+      premiumAlert("Permission needed", "Allow gallery access to upload list photo.");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -95,12 +95,12 @@ export function QuickGroceryOrderSection({
 
   async function submitRequest() {
     if (!listImageUri) {
-      Alert.alert("Photo required", "Upload a grocery list or item photo first.");
+      premiumAlert("Photo required", "Upload a grocery list or item photo first.");
       return;
     }
     const token = await getToken();
     if (!token) {
-      Alert.alert("Sign in required", "Please login first.");
+      premiumAlert("Sign in required", "Please login first.");
       router.push("/login");
       return;
     }
@@ -119,7 +119,7 @@ export function QuickGroceryOrderSection({
       });
       const upJson = (await up.json().catch(() => null)) as { imageUrl?: string; error?: string } | null;
       if (!up.ok || !upJson?.imageUrl) {
-        Alert.alert("Upload failed", upJson?.error || "Could not upload list image");
+        premiumAlert("Upload failed", upJson?.error || "Could not upload list image");
         return;
       }
 
@@ -133,7 +133,7 @@ export function QuickGroceryOrderSection({
         }),
       });
       if (!createRes.ok) {
-        Alert.alert("Request failed", createRes.error || "Could not create request");
+        premiumAlert("Request failed", createRes.error || "Could not create request");
         return;
       }
 
@@ -150,13 +150,13 @@ export function QuickGroceryOrderSection({
   async function quickPickAndSubmit() {
     const token = await getToken();
     if (!token) {
-      Alert.alert("Sign in required", "Please login first, then upload your grocery list photo.");
+      premiumAlert("Sign in required", "Please login first, then upload your grocery list photo.");
       router.push("/login");
       return;
     }
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Permission needed", "Allow gallery access to upload list photo.");
+      premiumAlert("Permission needed", "Allow gallery access to upload list photo.");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -180,7 +180,7 @@ export function QuickGroceryOrderSection({
       });
       const upJson = (await up.json().catch(() => null)) as { imageUrl?: string; error?: string } | null;
       if (!up.ok || !upJson?.imageUrl) {
-        Alert.alert("Upload failed", upJson?.error || "Could not upload list image");
+        premiumAlert("Upload failed", upJson?.error || "Could not upload list image");
         return;
       }
       const addr = await api<{ address: { address: string } | null }>("/api/user/address");
@@ -193,7 +193,7 @@ export function QuickGroceryOrderSection({
         }),
       });
       if (!createRes.ok) {
-        Alert.alert("Request failed", createRes.error || "Could not create request");
+        premiumAlert("Request failed", createRes.error || "Could not create request");
         return;
       }
       setSuccessVisible(true);

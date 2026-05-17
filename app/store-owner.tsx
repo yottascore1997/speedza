@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState, type ComponentProps, type ReactNode } from "react";
 import {
-  Alert,
   Platform,
   Pressable,
   RefreshControl,
@@ -10,6 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { premiumAlert } from "@/lib/premiumAlert";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -193,7 +193,7 @@ export default function StoreOwnerScreen() {
       const token = await getToken();
       const user = await getUser();
       if (!token || user?.role !== "STORE_OWNER") {
-        Alert.alert("Store owner only", "Please login with store owner account.", [
+        premiumAlert("Store owner only", "Please login with store owner account.", [
           { text: "OK", onPress: () => router.replace("/login") },
         ]);
         return;
@@ -261,7 +261,7 @@ export default function StoreOwnerScreen() {
     });
     setSaving(false);
     if (!res.ok) {
-      Alert.alert("Could not update order", res.error || "Please try again");
+      premiumAlert("Could not update order", res.error || "Please try again");
       return;
     }
     await loadStoreData();
@@ -275,7 +275,7 @@ export default function StoreOwnerScreen() {
     });
     setSaving(false);
     if (!res.ok) {
-      Alert.alert("Could not update product", res.error || "Please try again");
+      premiumAlert("Could not update product", res.error || "Please try again");
       return;
     }
     await loadStoreData();
@@ -283,14 +283,14 @@ export default function StoreOwnerScreen() {
 
   async function createProduct() {
     if (!selectedStoreId || !newProduct.categoryId || !newProduct.name.trim()) {
-      Alert.alert("Missing fields", "Select category and enter product name.");
+      premiumAlert("Missing fields", "Select category and enter product name.");
       return;
     }
     const mrp = Number(newProduct.mrp);
     const price = Number(newProduct.price);
     const stock = Number(newProduct.stock);
     if (!(mrp > 0 && price > 0 && stock >= 0 && Number.isFinite(stock))) {
-      Alert.alert("Invalid values", "Check MRP, price and stock.");
+      premiumAlert("Invalid values", "Check MRP, price and stock.");
       return;
     }
     setSaving(true);
@@ -310,7 +310,7 @@ export default function StoreOwnerScreen() {
     });
     setSaving(false);
     if (!res.ok) {
-      Alert.alert("Could not create product", res.error || "Please try again");
+      premiumAlert("Could not create product", res.error || "Please try again");
       return;
     }
     setNewProduct({ categoryId: "", name: "", mrp: "", price: "", stock: "", unit: "" });
@@ -325,7 +325,7 @@ export default function StoreOwnerScreen() {
     });
     setSaving(false);
     if (!res.ok) {
-      Alert.alert("Could not delete", res.error || "Please try again");
+      premiumAlert("Could not delete", res.error || "Please try again");
       return;
     }
     await loadStoreData();

@@ -1,17 +1,20 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, Platform, View } from "react-native";
-import { Redirect, Tabs } from "expo-router";
+import { Redirect, Tabs, useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { PlatformPressable } from "@react-navigation/elements";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "@/lib/theme";
 import { clearSession, getToken, getUser } from "@/lib/api";
 import { cartTotalQty, getCart, subscribeCart } from "@/lib/cart";
+import { checkServiceAreaGate } from "@/lib/deliveryAddress";
 
 const TAB_ICON_SIZE = 28;
 const TAB_CENTER_SIZE = 60;
 
 export default function TabsLayout() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const tabBottomPad = Math.max(insets.bottom, Platform.OS === "ios" ? 12 : 10);
   const tabBarHeight = 58 + tabBottomPad;
@@ -20,6 +23,7 @@ export default function TabsLayout() {
   const [authed, setAuthed] = useState(false);
   const [role, setRole] = useState<string | null>(null);
   const [cartQty, setCartQty] = useState(0);
+  const [areaOk, setAreaOk] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -43,6 +47,23 @@ export default function TabsLayout() {
     syncCart();
     return subscribeCart(syncCart);
   }, []);
+
+  useFocusEffect(() => {
+    if (!authed || role !== "CUSTOMER") return;
+    let cancelled = false;
+    void (async () => {
+      const gate = await checkServiceAreaGate();
+      if (cancelled) return;
+      if (gate.status !== "ok") {
+        router.replace("/location");
+        return;
+      }
+      setAreaOk(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  });
 
   if (checking) {
     return (
@@ -70,6 +91,21 @@ export default function TabsLayout() {
   if (role && role !== "CUSTOMER" && role !== "STORE_OWNER") {
     void clearSession();
     return <Redirect href="/login" />;
+  }
+
+  if (!areaOk) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: theme.bg,
+        }}
+      >
+        <ActivityIndicator size="large" color={theme.brandNavOrange} />
+      </View>
+    );
   }
 
   const badge =
@@ -230,8 +266,7 @@ export default function TabsLayout() {
         name="profile"
         options={{
           href: null,
-          headerShown: true,
-          title: "Profile & address",
+          headerShown: false,
         }}
       />
       <Tabs.Screen

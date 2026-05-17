@@ -52,26 +52,50 @@ export async function setCart(lines: CartLine[]) {
   notifyCartListeners();
 }
 
-export async function addToCart(line: Omit<CartLine, "quantity"> & { quantity?: number }) {
-  const cart = await getCart();
+export type AddToCartResult =
+  | { ok: true }
+  | {
+      ok: false;
+      reason: "store_mismatch";
+      currentStoreId: string;
+      currentStoreName?: string;
+    };
+
+type AddToCartOptions = {
+  /** When true, clears cart items from another store before adding (user confirmed). */
+  replaceOnStoreMismatch?: boolean;
+};
+
+export async function addToCart(
+  line: Omit<CartLine, "quantity"> & { quantity?: number },
+  options?: AddToCartOptions,
+): Promise<AddToCartResult> {
+  let cart = await getCart();
   if (cart.length && cart[0].storeId !== line.storeId) {
-    await setCart([]);
+    if (!options?.replaceOnStoreMismatch) {
+      return {
+        ok: false,
+        reason: "store_mismatch",
+        currentStoreId: cart[0].storeId,
+        currentStoreName: cart[0].storeName,
+      };
+    }
+    cart = [];
   }
-  const next = await getCart();
-  const idx = next.findIndex((l) => l.productId === line.productId);
+  const idx = cart.findIndex((l) => l.productId === line.productId);
   const q = line.quantity ?? 1;
   if (idx >= 0) {
-    next[idx] = {
-      ...next[idx],
-      quantity: next[idx].quantity + q,
-      storeName: line.storeName ?? next[idx].storeName,
-      imageUrl: line.imageUrl ?? next[idx].imageUrl,
-      unitLabel: line.unitLabel ?? next[idx].unitLabel,
-      mrp: line.mrp ?? next[idx].mrp,
-      discountPercent: line.discountPercent ?? next[idx].discountPercent,
+    cart[idx] = {
+      ...cart[idx],
+      quantity: cart[idx].quantity + q,
+      storeName: line.storeName ?? cart[idx].storeName,
+      imageUrl: line.imageUrl ?? cart[idx].imageUrl,
+      unitLabel: line.unitLabel ?? cart[idx].unitLabel,
+      mrp: line.mrp ?? cart[idx].mrp,
+      discountPercent: line.discountPercent ?? cart[idx].discountPercent,
     };
   } else {
-    next.push({
+    cart.push({
       productId: line.productId,
       storeId: line.storeId,
       name: line.name,
@@ -84,7 +108,8 @@ export async function addToCart(line: Omit<CartLine, "quantity"> & { quantity?: 
       discountPercent: line.discountPercent,
     });
   }
-  await setCart(next);
+  await setCart(cart);
+  return { ok: true };
 }
 
 export async function clearCart() {

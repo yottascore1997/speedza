@@ -62,42 +62,18 @@ const { width: SCREEN_W } = Dimensions.get("window");
 /** Home product rails — compact tiles so ~2.5–3 cards peek per row */
 const HOME_RAIL_CARD_W = Math.max(104, Math.min(124, Math.round((SCREEN_W - 52) / 2.85)));
 const HOME_RAIL_IMAGE_H = Math.round(HOME_RAIL_CARD_W * 0.64);
-/** Hero right image strip — keep in sync with ScrollView / Pressable heights below */
-const HOME_HERO_IMG_H = 174;
+/** Home top banner carousel — full-bleed slides from assets/bg1–bg4 */
+const HOME_BANNER_PAD = 12;
+const HOME_BANNER_SLIDE_W = SCREEN_W - HOME_BANNER_PAD * 2;
+const HOME_BANNER_H = Math.round(HOME_BANNER_SLIDE_W * 0.42);
+const HOME_BANNER_ZOOM = 1.14;
 
-/** Hero image slider — labels + category routes + Unsplash art. */
-const HOME_HERO_IMAGE_SLIDES = [
-  {
-    id: "kirana",
-    label: "Kirana",
-    image:
-      "https://images.unsplash.com/photo-1761222191837-4448599c09fc?auto=format&fit=crop&w=900&h=1100&q=88",
-    categoryKey: "grocery",
-  },
-  {
-    id: "daily",
-    label: "Daily products",
-    image: "https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=800&h=1000&q=85",
-    categoryKey: "daily-essentials",
-  },
-  {
-    id: "fruits",
-    label: "Fruits",
-    image: "https://images.unsplash.com/photo-1619566636858-adf3ef46400b?auto=format&fit=crop&w=800&h=1000&q=85",
-    categoryKey: "fruits-vegetables",
-  },
+const HOME_BANNERS = [
+  require("../../assets/bg1.png"),
+  require("../../assets/bg2.png"),
+  require("../../assets/bg3.png"),
+  require("../../assets/bg4.png"),
 ] as const;
-
-const heroOfferCardShadow = Platform.select({
-  ios: {
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-  },
-  android: { elevation: 6 },
-  default: {},
-});
 
 function previewMainCategoryImage(m: MainCategory): string | undefined {
   const hit = m.subcategories.find((s) => s.imageUrl?.trim());
@@ -187,6 +163,26 @@ function discountPercentForProduct(p: ProductHit): number {
   return 0;
 }
 
+/** Keep home rails on one store so add-to-cart does not wipe other lines. */
+function mergeHomeCatalogProducts(grocery: ProductHit[], search: ProductHit[]): ProductHit[] {
+  const inStock = (p: ProductHit) => (typeof p.stock === "number" ? p.stock > 0 : true);
+  const groceryList = grocery.filter(inStock);
+  const searchList = search.filter(inStock);
+  const anchorStoreId = groceryList.find((p) => p.store?.id?.trim())?.store?.id?.trim() ?? null;
+
+  const deduped = [...groceryList, ...searchList].filter(
+    (p, i, arr) => arr.findIndex((x) => x.id === p.id) === i,
+  );
+
+  if (!anchorStoreId) return deduped;
+
+  const sameStore = deduped.filter((p) => {
+    const sid = p.store?.id?.trim();
+    return !sid || sid === anchorStoreId;
+  });
+  return sameStore.length >= 6 ? sameStore : deduped;
+}
+
 function cartLineFromProductHit(p: ProductHit): CartQtyStepperLine | null {
   const storeId = p.store?.id?.trim();
   if (!storeId) return null;
@@ -262,9 +258,8 @@ export default function ShopHomeScreen() {
   const [dealsNine, setDealsNine] = useState<ProductHit[]>([]);
   const [browseProducts, setBrowseProducts] = useState<ProductHit[]>([]);
 
-  const heroImgSlideW = SCREEN_W * 0.34;
-  const heroImgScrollRef = useRef<ScrollView>(null);
-  const [heroImgIndex, setHeroImgIndex] = useState(0);
+  const homeBannerScrollRef = useRef<ScrollView>(null);
+  const [homeBannerIndex, setHomeBannerIndex] = useState(0);
 
   const resolveCoords = useCallback(async () => {
     const token = await getToken();
@@ -308,9 +303,10 @@ export default function ShopHomeScreen() {
         setBannerUrl(`${getApiBase()}/banners/todays-match.svg`);
       }
 
-      const mergedProducts = [...(groceryQuick.data?.products ?? []), ...(searchExtra.data?.products ?? [])]
-        .filter((p) => (typeof p.stock === "number" ? p.stock > 0 : true))
-        .filter((p, i, arr) => arr.findIndex((x) => x.id === p.id) === i);
+      const mergedProducts = mergeHomeCatalogProducts(
+        groceryQuick.data?.products ?? [],
+        searchExtra.data?.products ?? [],
+      );
       setBrowseProducts(mergedProducts.slice(0, 40));
 
       const offers = mergedProducts
@@ -398,15 +394,16 @@ export default function ShopHomeScreen() {
   }, [heroSlides.length]);
 
   useEffect(() => {
+    if (HOME_BANNERS.length <= 1) return;
     const t = setInterval(() => {
-      setHeroImgIndex((prev) => {
-        const next = (prev + 1) % HOME_HERO_IMAGE_SLIDES.length;
-        heroImgScrollRef.current?.scrollTo({ x: next * heroImgSlideW, animated: true });
+      setHomeBannerIndex((prev) => {
+        const next = (prev + 1) % HOME_BANNERS.length;
+        homeBannerScrollRef.current?.scrollTo({ x: next * HOME_BANNER_SLIDE_W, animated: true });
         return next;
       });
     }, 4200);
     return () => clearInterval(t);
-  }, [heroImgSlideW]);
+  }, []);
 
   function openCategory(key: string) {
     const href =
@@ -441,156 +438,95 @@ export default function ShopHomeScreen() {
           onCategoryPress={(key) => openCategory(key)}
         />
 
-        <LinearGradient
-          colors={["#ffffff", "#f4fdf7", "#ffffff"]}
-          locations={[0, 0.45, 1]}
+        <View
           style={{
             paddingTop: 8,
-            paddingHorizontal: 18,
-            paddingBottom: 18,
-            borderBottomLeftRadius: 34,
-            borderBottomRightRadius: 34,
-            overflow: "hidden",
+            paddingHorizontal: HOME_BANNER_PAD,
+            paddingBottom: 14,
+            backgroundColor: "#ffffff",
+            borderBottomLeftRadius: 24,
+            borderBottomRightRadius: 24,
           }}
         >
-          <View style={{ marginTop: 0, minHeight: 228 }}>
-            <MaterialCommunityIcons name="leaf" size={20} color="#86efac" style={{ position: "absolute", left: 4, top: 24, opacity: 0.45, transform: [{ rotate: "-22deg" }] }} />
-            <MaterialCommunityIcons name="leaf" size={16} color="#bbf7d0" style={{ position: "absolute", left: 120, top: 6, opacity: 0.5, transform: [{ rotate: "16deg" }] }} />
-            <MaterialCommunityIcons name="leaf" size={18} color="#86efac" style={{ position: "absolute", right: 8, top: 72, opacity: 0.4, transform: [{ rotate: "24deg" }] }} />
-            <MaterialCommunityIcons name="leaf" size={15} color="#bbf7d0" style={{ position: "absolute", right: 100, bottom: 100, opacity: 0.42, transform: [{ rotate: "-14deg" }] }} />
-            <MaterialCommunityIcons name="food-apple" size={44} color="#bbf7d0" style={{ position: "absolute", right: -6, top: 120, opacity: 0.22 }} />
-            <MaterialCommunityIcons name="carrot" size={36} color="#d9f99d" style={{ position: "absolute", left: 140, bottom: 40, opacity: 0.2, transform: [{ rotate: "25deg" }] }} />
-
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-              <View style={{ flex: 1, minWidth: 0, paddingTop: 4, zIndex: 2, paddingRight: 4 }}>
-                <Text
-                  numberOfLines={1}
-                  style={{ color: "#111827", fontSize: 32, lineHeight: 36, fontWeight: "800", letterSpacing: -0.55 }}
-                >
-                  Groceries{"\u00A0"}in
-                </Text>
-                <Text
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.85}
-                  style={{ marginTop: 4, color: "#14532d", fontSize: 42, lineHeight: 44, fontWeight: "900", letterSpacing: -1.4 }}
-                >
-                  10 Minutes
-                </Text>
-                <Text style={{ marginTop: 8, color: "#64748b", fontSize: 13, lineHeight: 19, fontWeight: "600" }}>
-                  Fresh groceries & daily essentials delivered to your doorstep
-                </Text>
-
-                <View style={{ marginTop: 10 }}>
-                  <Pressable onPress={() => openCategory(HOME_HERO_IMAGE_SLIDES[heroImgIndex].categoryKey)} style={{ borderRadius: 999, overflow: "hidden", alignSelf: "flex-start" }}>
-                    <LinearGradient
-                      colors={["#f97316", "#ea580c"]}
-                      start={{ x: 0, y: 0.5 }}
-                      end={{ x: 1, y: 0.5 }}
-                      style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 18, paddingVertical: 11 }}
-                    >
-                      <Text style={{ color: "#fff", fontSize: 13, fontWeight: "900" }}>Shop Now</Text>
-                      <MaterialCommunityIcons name="arrow-right" size={18} color="#fff" />
-                    </LinearGradient>
-                  </Pressable>
-                </View>
-              </View>
-
-              <View style={{ width: heroImgSlideW, flexShrink: 0, alignItems: "center" }}>
+          <View
+            style={{
+              borderRadius: 16,
+              overflow: "hidden",
+              backgroundColor: "#f1f5f9",
+              ...bannerCardShadow,
+            }}
+          >
+            <ScrollView
+              ref={homeBannerScrollRef}
+              horizontal
+              pagingEnabled
+              nestedScrollEnabled
+              showsHorizontalScrollIndicator={false}
+              bounces={false}
+              decelerationRate="fast"
+              removeClippedSubviews={false}
+              onMomentumScrollEnd={(e) => {
+                const x = e.nativeEvent.contentOffset.x;
+                const idx = Math.round(x / Math.max(1, HOME_BANNER_SLIDE_W));
+                setHomeBannerIndex(Math.max(0, Math.min(idx, HOME_BANNERS.length - 1)));
+              }}
+              style={{ width: HOME_BANNER_SLIDE_W, height: HOME_BANNER_H }}
+            >
+              {HOME_BANNERS.map((src, i) => (
                 <View
+                  key={`home-banner-${i}`}
                   style={{
-                    width: heroImgSlideW,
-                    height: HOME_HERO_IMG_H,
-                    borderRadius: 20,
+                    width: HOME_BANNER_SLIDE_W,
+                    height: HOME_BANNER_H,
                     overflow: "hidden",
-                    backgroundColor: "#ecfdf5",
+                    backgroundColor: "#f1f5f9",
                   }}
                 >
-                  <ScrollView
-                    ref={heroImgScrollRef}
-                    horizontal
-                    pagingEnabled
-                    nestedScrollEnabled
-                    showsHorizontalScrollIndicator={false}
-                    bounces={false}
-                    decelerationRate="fast"
-                    removeClippedSubviews={false}
-                    onMomentumScrollEnd={(e) => {
-                      const x = e.nativeEvent.contentOffset.x;
-                      const idx = Math.round(x / Math.max(1, heroImgSlideW));
-                      setHeroImgIndex(Math.max(0, Math.min(idx, HOME_HERO_IMAGE_SLIDES.length - 1)));
-                    }}
-                    style={{ width: heroImgSlideW, height: HOME_HERO_IMG_H }}
-                  >
-                    {HOME_HERO_IMAGE_SLIDES.map((s) => (
-                      <Pressable key={s.id} onPress={() => openCategory(s.categoryKey)} style={{ width: heroImgSlideW, height: HOME_HERO_IMG_H }}>
-                        <Image
-                          source={{ uri: s.image }}
-                          style={{ width: "100%", height: "100%", backgroundColor: "#ecfdf5" }}
-                          contentFit="cover"
-                          cachePolicy="memory-disk"
-                        />
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                  <View
-                    pointerEvents="none"
+                  <Image
+                    source={src}
                     style={{
                       position: "absolute",
-                      left: 8,
-                      top: 8,
-                      maxWidth: heroImgSlideW - 16,
-                      paddingHorizontal: 10,
-                      paddingVertical: 6,
-                      borderRadius: 999,
-                      backgroundColor: "rgba(255,255,255,0.94)",
-                      borderWidth: 1,
-                      borderColor: "rgba(22, 101, 52, 0.12)",
+                      left: 0,
+                      top: 0,
+                      width: HOME_BANNER_SLIDE_W * HOME_BANNER_ZOOM,
+                      height: HOME_BANNER_H * HOME_BANNER_ZOOM,
                     }}
-                  >
-                    <Text numberOfLines={2} style={{ color: "#14532d", fontSize: 10.5, lineHeight: 13, fontWeight: "900" }}>
-                      {HOME_HERO_IMAGE_SLIDES[heroImgIndex].label}
-                    </Text>
-                  </View>
-                  <View
-                    style={{
-                      position: "absolute",
-                      right: 4,
-                      bottom: 10,
-                      maxWidth: heroImgSlideW * 0.52,
-                      borderRadius: 14,
-                      backgroundColor: "#ffffff",
-                      paddingVertical: 8,
-                      paddingHorizontal: 10,
-                      borderWidth: 1,
-                      borderColor: "rgba(22, 101, 52, 0.1)",
-                      ...heroOfferCardShadow,
-                    }}
-                  >
-                    <Text style={{ color: "#16a34a", fontSize: 10, fontWeight: "900", letterSpacing: 0.2 }}>FLAT 10% OFF</Text>
-                    <Text style={{ marginTop: 2, color: "#334155", fontSize: 9.5, lineHeight: 13, fontWeight: "700" }}>first order</Text>
-                  </View>
+                    contentFit="cover"
+                    contentPosition="left"
+                  />
                 </View>
-                <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 4 }}>
-                  {HOME_HERO_IMAGE_SLIDES.map((s, i) => (
-                    <View
-                      key={s.id}
-                      style={{
-                        width: i === heroImgIndex ? 8 : 6,
-                        height: i === heroImgIndex ? 8 : 6,
-                        borderRadius: 99,
-                        backgroundColor: i === heroImgIndex ? "#166534" : "#cbd5e1",
-                      }}
-                    />
-                  ))}
-                </View>
-              </View>
+              ))}
+            </ScrollView>
+            <View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                bottom: 10,
+                left: 0,
+                right: 0,
+                flexDirection: "row",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              {HOME_BANNERS.map((_, i) => (
+                <View
+                  key={`home-banner-dot-${i}`}
+                  style={{
+                    width: i === homeBannerIndex ? 18 : 6,
+                    height: 6,
+                    borderRadius: 99,
+                    backgroundColor: i === homeBannerIndex ? "#ffffff" : "rgba(255,255,255,0.55)",
+                  }}
+                />
+              ))}
             </View>
           </View>
 
           <View
             style={{
-              marginTop: -20,
+              marginTop: 12,
               borderRadius: 16,
               backgroundColor: "#1e3d2a",
               paddingHorizontal: 6,
@@ -626,7 +562,7 @@ export default function ShopHomeScreen() {
               </View>
             ))}
           </View>
-        </LinearGradient>
+        </View>
 
         <View style={{ marginTop: 12, marginHorizontal: 12, paddingVertical: 4, paddingHorizontal: 0 }}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingHorizontal: 2, alignItems: "flex-start" }}>
@@ -890,10 +826,10 @@ export default function ShopHomeScreen() {
                 const price = numPrice(p.price);
                 const mrp = numPrice(p.mrp);
                 const offAmt = Math.max(0, Math.round(mrp - price));
+                const cartLine = cartLineFromProductHit(p);
                 return (
-                  <Pressable
+                  <View
                     key={`deal-${p.id}`}
-                    onPress={() => router.push(`/product/${p.id}` as Href)}
                     style={{
                       width: 116,
                       borderRadius: 16,
@@ -903,30 +839,43 @@ export default function ShopHomeScreen() {
                     }}
                   >
                     <View style={{ height: 96, backgroundColor: "#f8fafc", borderRadius: 15, overflow: "hidden" }}>
-                      {img ? <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : null}
-                      <View style={{ position: "absolute", right: 6, bottom: 6 }}>
-                        <View
-                          style={{
-                            width: 30,
-                            height: 30,
-                            borderRadius: 15,
-                            backgroundColor: "#2f9e44",
-                            borderWidth: 1,
-                            borderColor: "#ffffff",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            ...Platform.select({
-                              ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 },
-                              android: { elevation: 2 },
-                              default: {},
-                            }),
-                          }}
-                        >
-                          <MaterialCommunityIcons name="plus" size={19} color="#fff" />
-                        </View>
+                      <Pressable style={{ flex: 1 }} onPress={() => router.push(`/product/${p.id}` as Href)}>
+                        {img ? <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : null}
+                      </Pressable>
+                      <View style={{ position: "absolute", right: 6, bottom: 6, zIndex: 2 }}>
+                        {cartLine ? (
+                          <CartQtyStepper
+                            line={cartLine}
+                            fabPlus
+                            maxQty={typeof p.stock === "number" ? Math.max(0, p.stock) : 999}
+                            canAdd={typeof p.stock !== "number" || p.stock > 0}
+                          />
+                        ) : (
+                          <Pressable
+                            onPress={() => router.push(`/product/${p.id}` as Href)}
+                            style={{
+                              width: 30,
+                              height: 30,
+                              borderRadius: 15,
+                              backgroundColor: "#2f9e44",
+                              borderWidth: 1,
+                              borderColor: "#ffffff",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              ...Platform.select({
+                                ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 },
+                                android: { elevation: 2 },
+                                default: {},
+                              }),
+                            }}
+                            hitSlop={10}
+                          >
+                            <MaterialCommunityIcons name="plus" size={19} color="#fff" />
+                          </Pressable>
+                        )}
                       </View>
                     </View>
-                    <View style={{ paddingHorizontal: 3, paddingTop: 8, paddingBottom: 6 }}>
+                    <Pressable onPress={() => router.push(`/product/${p.id}` as Href)} style={{ paddingHorizontal: 3, paddingTop: 8, paddingBottom: 6 }}>
                       <Text numberOfLines={2} ellipsizeMode="tail" style={{ color: theme.text, fontWeight: "800", fontSize: 11.5, lineHeight: 14.5, minHeight: 29 }}>
                         {p.name}
                       </Text>
@@ -944,8 +893,8 @@ export default function ShopHomeScreen() {
                           {p.unitLabel}
                         </Text>
                       )}
-                    </View>
-                  </Pressable>
+                    </Pressable>
+                  </View>
                 );
               })}
             </ScrollView>

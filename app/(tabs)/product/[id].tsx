@@ -5,7 +5,6 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator,
-  Alert,
   Platform,
   StyleSheet,
   useWindowDimensions,
@@ -13,6 +12,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from "react-native";
+import { premiumAlert } from "@/lib/premiumAlert";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -264,7 +264,7 @@ export default function ProductScreen() {
     try {
       const res = await api<{ product: Product }>(`/api/shop/product/${encodeURIComponent(id)}`);
       if (!res.ok || !res.data?.product) {
-        Alert.alert("Error", res.error || "Could not load product");
+        premiumAlert("Error", res.error || "Could not load product");
         setP(null);
         return;
       }

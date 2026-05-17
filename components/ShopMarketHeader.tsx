@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, Pressable, ScrollView, TextInput, Alert, Platform, Image, Modal } from "react-native";
+import { View, Text, Pressable, ScrollView, TextInput, Platform, Image, Modal } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -9,6 +9,8 @@ import { cartTotalQty, getCart, subscribeCart } from "@/lib/cart";
 import { theme } from "@/lib/theme";
 import { getShopHeaderColors } from "@/lib/shopHeaderTheme";
 import { rms, rs } from "@/lib/responsive";
+import { validateDeliveryPincode } from "@/lib/serviceArea";
+import { premiumAlert } from "@/lib/premiumAlert";
 
 const SHOP_KEY = "__shop__";
 
@@ -148,7 +150,7 @@ export function ShopMarketHeader({
   async function useCurrentLocationAddress() {
     const perm = await Location.requestForegroundPermissionsAsync();
     if (perm.status !== "granted") {
-      Alert.alert("Permission needed", "Allow location permission first.");
+      premiumAlert("Permission needed", "Allow location permission first.");
       return;
     }
     const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
@@ -162,7 +164,7 @@ export function ShopMarketHeader({
       const line = [r.name, r.street, r.city, r.region, r.postalCode].filter(Boolean).join(", ");
       if (line.trim()) setAddressText(line);
     }
-    Alert.alert("Location captured", "Current location selected.");
+    premiumAlert("Location captured", "Current location selected.");
   }
 
   async function saveDeliveryAddress() {
@@ -172,19 +174,19 @@ export function ShopMarketHeader({
 
     if (addressMode === "current") {
       if (la == null || ln == null) {
-        Alert.alert("Location", "Tap 'Use current location' first.");
+        premiumAlert("Location", "Tap 'Use current location' first.");
         return;
       }
       if (!finalAddress) finalAddress = "Current location";
     } else {
       if (!finalAddress) {
-        Alert.alert("Address", "Please type your address.");
+        premiumAlert("Address", "Please type your address.");
         return;
       }
       if (la == null || ln == null) {
         const geo = await Location.geocodeAsync(finalAddress).catch(() => []);
         if (!geo.length) {
-          Alert.alert("Address", "Could not map this address. Please type a clearer address.");
+          premiumAlert("Address", "Could not map this address. Please type a clearer address.");
           return;
         }
         la = geo[0]!.latitude;
@@ -192,6 +194,16 @@ export function ShopMarketHeader({
         setAddressLat(la);
         setAddressLng(ln);
       }
+    }
+
+    const pinCheck = await validateDeliveryPincode({
+      addressText: finalAddress,
+      latitude: la,
+      longitude: ln,
+    });
+    if (!pinCheck.ok) {
+      premiumAlert("Delivery area", pinCheck.message);
+      return;
     }
 
     setSavingAddress(true);
@@ -202,16 +214,18 @@ export function ShopMarketHeader({
         address: finalAddress,
         latitude: la,
         longitude: ln,
+        pincode: pinCheck.pincode,
+        city: pinCheck.city,
       }),
     });
     setSavingAddress(false);
     if (!res.ok) {
-      Alert.alert("Error", res.error || "Could not save address.");
+      premiumAlert("Error", res.error || "Could not save address.");
       return;
     }
     await loadAddress();
     setAddressModalOpen(false);
-    Alert.alert("Saved", "Delivery address updated.");
+    premiumAlert("Saved", "Delivery address updated.");
   }
 
   useEffect(() => {
@@ -230,7 +244,7 @@ export function ShopMarketHeader({
   }
 
   async function signOut() {
-    Alert.alert("Sign out?", "", [
+    premiumAlert("Sign out?", "", [
       { text: "Cancel", style: "cancel" },
       {
         text: "OUT",

@@ -7,6 +7,7 @@ import { useFonts } from "expo-font";
 import { Lato_400Regular, Lato_700Bold, Lato_900Black } from "@expo-google-fonts/lato";
 import { theme } from "@/lib/theme";
 import { applyGlobalTypography, appFonts } from "@/lib/typography";
+import { PremiumAlertProvider } from "@/components/PremiumAlertProvider";
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -31,7 +32,7 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <PremiumAlertProvider>
       <StatusBar style="dark" />
       <Stack
         screenOptions={{
@@ -43,8 +44,9 @@ export default function RootLayout() {
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="location" options={{ headerShown: false }} />
         <Stack.Screen name="store-owner" options={{ headerShown: false }} />
       </Stack>
-    </>
+    </PremiumAlertProvider>
   );
 }

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction, type ReactNode } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -10,6 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { premiumAlert } from "@/lib/premiumAlert";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
@@ -247,7 +247,7 @@ export function StoreOwnerCatalog({
       body: JSON.stringify(body),
     });
     if (!res.ok) {
-      Alert.alert("Could not save", res.error || "Try again");
+      premiumAlert("Could not save", res.error || "Try again");
       return;
     }
     await onReloadStores();
@@ -255,7 +255,7 @@ export function StoreOwnerCatalog({
 
   async function saveHours() {
     if (hoursEnabled && (!openAt.trim() || !closeAt.trim())) {
-      Alert.alert("Business hours", "Enter open and close time (24h, e.g. 09:00 and 22:00) before turning hours on.");
+      premiumAlert("Business hours", "Enter open and close time (24h, e.g. 09:00 and 22:00) before turning hours on.");
       return;
     }
     await patchStore({
@@ -268,7 +268,7 @@ export function StoreOwnerCatalog({
   async function uploadCover() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Photos", "Allow library access to set your shop cover.");
+      premiumAlert("Photos", "Allow library access to set your shop cover.");
       return;
     }
     const pick = await ImagePicker.launchImageLibraryAsync({
@@ -291,7 +291,7 @@ export function StoreOwnerCatalog({
     });
     const json = (await res.json().catch(() => null)) as { imageUrl?: string; error?: string } | null;
     if (!res.ok || !json?.imageUrl) {
-      Alert.alert("Upload failed", json && "error" in json ? String(json.error) : "Try again");
+      premiumAlert("Upload failed", json && "error" in json ? String(json.error) : "Try again");
       return;
     }
     await patchStore({ imageUrl: json.imageUrl });
@@ -299,7 +299,7 @@ export function StoreOwnerCatalog({
   }
 
   async function clearCover() {
-    Alert.alert("Remove cover image?", "Your shop will fall back to the default look.", [
+    premiumAlert("Remove cover image?", "Your shop will fall back to the default look.", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Remove",
@@ -311,12 +311,12 @@ export function StoreOwnerCatalog({
 
   async function runImport() {
     if (!importMcId) {
-      Alert.alert("Import", "Choose a template category below.");
+      premiumAlert("Import", "Choose a template category below.");
       return;
     }
     const cat = masterCats.find((c) => c.id === importMcId);
     if (!cat?.products.length) {
-      Alert.alert("Import", "This category has no template products.");
+      premiumAlert("Import", "This category has no template products.");
       return;
     }
     const products = cat.products.map((p) => ({ masterProductId: p.id, price: 99 }));
@@ -329,10 +329,10 @@ export function StoreOwnerCatalog({
       }),
     });
     if (!res.ok) {
-      Alert.alert("Import failed", res.error || "Try again");
+      premiumAlert("Import failed", res.error || "Try again");
       return;
     }
-    Alert.alert("Done", "New products were added where they did not already exist.");
+    premiumAlert("Done", "New products were added where they did not already exist.");
     await onReloadCatalog();
   }
 
@@ -340,11 +340,11 @@ export function StoreOwnerCatalog({
     const raw = priceDraft[productId]?.trim() ?? "";
     const v = Number(raw);
     if (!Number.isFinite(v) || v <= 0) {
-      Alert.alert("Price", "Enter a valid selling price.");
+      premiumAlert("Price", "Enter a valid selling price.");
       return;
     }
     if (v > mrp) {
-      Alert.alert("Price", "Selling price cannot be above MRP.");
+      premiumAlert("Price", "Selling price cannot be above MRP.");
       return;
     }
     await onUpdateProduct(productId, { price: v });
@@ -918,7 +918,7 @@ export function StoreOwnerCatalog({
                   </Pressable>
                   <Pressable
                     onPress={() => {
-                      Alert.alert("Delete this product?", p.name, [
+                      premiumAlert("Delete this product?", p.name, [
                         { text: "Cancel", style: "cancel" },
                         { text: "Delete", style: "destructive", onPress: () => void onDeleteProduct(p.id) },
                       ]);

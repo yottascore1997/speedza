@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Platform, Pressable, Text, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import { addToCart, getCart, setLineQuantity, subscribeCart, type CartLine } from "@/lib/cart";
 import { theme } from "@/lib/theme";
+import { premiumAlert } from "@/lib/premiumAlert";
 
 export type CartQtyStepperLine = Omit<CartLine, "quantity">;
 
@@ -26,6 +28,8 @@ type Props = {
   addBorderColor?: string;
   /** White pill, green border & label (category grid / Blinkit-style ADD) */
   addOutline?: boolean;
+  /** Green + circle on product image; expands to − qty + when in cart */
+  fabPlus?: boolean;
 };
 
 export function CartQtyStepper({
@@ -38,6 +42,7 @@ export function CartQtyStepper({
   addBgColor = ADD_GREEN,
   addBorderColor = "#14532d",
   addOutline = false,
+  fabPlus = false,
 }: Props) {
   const [qty, setQty] = useState(0);
   const inflight = useRef(false);
@@ -63,6 +68,36 @@ export function CartQtyStepper({
   const atMax = qty >= cap;
   const addDisabled = !canAdd;
 
+  async function addFirstToCart(): Promise<boolean> {
+    const res = await addToCart({ ...line, quantity: 1 });
+    if (res.ok) return true;
+
+    if (res.reason !== "store_mismatch") return false;
+
+    const existingLabel = res.currentStoreName?.trim() || "another store";
+    const nextLabel = line.storeName?.trim() || "this store";
+
+    return new Promise((resolve) => {
+      premiumAlert(
+        "Different store",
+        `Your cart has items from ${existingLabel}. Replace them with items from ${nextLabel}?`,
+        [
+          { text: "Keep current cart", style: "cancel", onPress: () => resolve(false) },
+          {
+            text: "Replace cart",
+            style: "destructive",
+            onPress: () => {
+              void (async () => {
+                const replaced = await addToCart({ ...line, quantity: 1 }, { replaceOnStoreMismatch: true });
+                resolve(replaced.ok);
+              })();
+            },
+          },
+        ],
+      );
+    });
+  }
+
   async function increment() {
     if (inflight.current) return;
     if (qty === 0 && !canAdd) return;
@@ -72,8 +107,12 @@ export function CartQtyStepper({
     const next = prev === 0 ? 1 : Math.min(prev + 1, cap);
     setQty(next);
     try {
-      if (prev === 0) await addToCart({ ...line, quantity: 1 });
-      else await setLineQuantity(line.productId, next);
+      if (prev === 0) {
+        const added = await addFirstToCart();
+        if (!added) setQty(prev);
+      } else {
+        await setLineQuantity(line.productId, next);
+      }
     } catch {
       setQty(prev);
     } finally {
@@ -106,6 +145,96 @@ export function CartQtyStepper({
   const rowMinH = dense ? 40 : compact ? 40 : 52;
   const rowPadH = dense ? 3 : compact ? 6 : 8;
   const rowPadV = dense ? 4 : compact ? 4 : 6;
+
+  const fabShadow = Platform.select({
+    ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 },
+    android: { elevation: 2 },
+    default: {},
+  });
+
+  if (fabPlus) {
+    if (qty === 0) {
+      return (
+        <Pressable
+          onPress={() => void increment()}
+          disabled={addDisabled}
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: 15,
+            backgroundColor: addDisabled ? "#94a3b8" : "#2f9e44",
+            borderWidth: 1,
+            borderColor: "#ffffff",
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: addDisabled ? 0.65 : 1,
+            ...fabShadow,
+          }}
+          hitSlop={10}
+        >
+          <MaterialCommunityIcons name="plus" size={19} color="#fff" />
+        </Pressable>
+      );
+    }
+
+    const fabBtn = 24;
+    return (
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          height: 30,
+          borderRadius: 15,
+          backgroundColor: "#ffffff",
+          borderWidth: 1,
+          borderColor: "#2f9e44",
+          paddingHorizontal: 2,
+          gap: 2,
+          ...fabShadow,
+        }}
+      >
+        <Pressable
+          onPress={() => void decrement()}
+          style={{
+            width: fabBtn,
+            height: fabBtn,
+            borderRadius: fabBtn / 2,
+            backgroundColor: "#2f9e44",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          hitSlop={6}
+        >
+          <Text style={{ fontSize: 14, fontWeight: "900", color: "#fff", marginTop: -1 }}>−</Text>
+        </Pressable>
+        <Text style={{ minWidth: 14, textAlign: "center", fontSize: 12, fontWeight: "900", color: "#166534" }}>{qty}</Text>
+        <Pressable
+          onPress={() => void increment()}
+          disabled={!canAdd || atMax}
+          style={{
+            width: fabBtn,
+            height: fabBtn,
+            borderRadius: fabBtn / 2,
+            backgroundColor: atMax || !canAdd ? "#94a3b8" : "#2f9e44",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          hitSlop={6}
+        >
+          <Text
+            style={{
+              fontSize: 14,
+              fontWeight: "900",
+              color: atMax || !canAdd ? "rgba(255,255,255,0.8)" : "#fff",
+              marginTop: -1,
+            }}
+          >
+            +
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   if (qty === 0) {
     return (

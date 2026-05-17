@@ -175,6 +175,11 @@ const KEY_THEMES: Record<string, ShopHeaderColors> = {
   dairy: FROZEN_TEAL,
 };
 
+/** Home tab header — use on profile / account hero for brand match */
+export function getHomeShopHeaderColors(): ShopHeaderColors {
+  return HOME_ORANGE;
+}
+
 export function getShopHeaderColors(activeKey: string): ShopHeaderColors {
   const k = norm(activeKey);
   if (k === norm(SHOP_HOME) || k === "") {

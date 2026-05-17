@@ -5,12 +5,12 @@ import {
   Text,
   ScrollView,
   Pressable,
-  Alert,
   TextInput,
   Platform,
   useWindowDimensions,
   Animated,
 } from "react-native";
+import { premiumAlert } from "@/lib/premiumAlert";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -178,7 +178,7 @@ export default function StoreDetailScreen() {
         setStoreImage(res.data.store.imageUrl ?? null);
         setStoreAddress(res.data.store.address?.trim() ?? "");
         setCategories(res.data.store.categories);
-      } else Alert.alert("Error", res.error || "Failed");
+      } else premiumAlert("Error", res.error || "Failed");
     } finally {
       if (latestStoreIdRef.current === storeId) {
         setBooting(false);

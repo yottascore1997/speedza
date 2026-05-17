@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   Pressable,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,6 +11,7 @@ import {
   StyleSheet,
   Dimensions,
 } from "react-native";
+import { premiumAlert } from "@/lib/premiumAlert";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as Notifications from "expo-notifications";
@@ -21,6 +21,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api, clearSession, getApiBase, getToken, setSession } from "@/lib/api";
 import { theme } from "@/lib/theme";
+import { validateDeliveryPincode } from "@/lib/serviceArea";
 import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
@@ -90,11 +91,11 @@ export default function LoginScreen() {
     }
     if (user.role !== "CUSTOMER") {
       await clearSession();
-      Alert.alert("Access restricted", "Only Customer and Store Owner panels are enabled.");
+      premiumAlert("Access restricted", "Only Customer and Store Owner panels are enabled.");
       router.replace("/login");
       return;
     }
-    router.replace("/");
+    router.replace("/location");
   }
 
   async function sendOtp() {
@@ -102,20 +103,20 @@ export default function LoginScreen() {
     try {
       const phone10 = normalizePhone10(phone);
       if (phone10.length < 10) {
-        Alert.alert("Invalid phone", "Please enter a valid 10-digit mobile number.");
+        premiumAlert("Invalid phone", "Please enter a valid 10-digit mobile number.");
         return;
       }
       if (isDummyOtpPhone10(phone)) {
         setConfirm(null);
         setOtp("");
         setStep(2);
-        Alert.alert("Test login", `Use OTP ${DUMMY_OTP_CODE} for this number.`);
+        premiumAlert("Test login", `Use OTP ${DUMMY_OTP_CODE} for this number.`);
         return;
       }
       const digits = phone.replace(/\D/g, "");
       const e164 = digits.startsWith("91") ? `+${digits}` : `+91${digits}`;
       if (Platform.OS !== "web" && !nativeFirebaseCfg) {
-        Alert.alert(
+        premiumAlert(
           "Unable to sign in",
           "This app version could not load sign-in settings. Please contact support or try updating the app.",
         );
@@ -129,17 +130,17 @@ export default function LoginScreen() {
       } else {
         setConfirm(null);
         if (!bridgeReady) {
-          Alert.alert("Please wait", "Secure login is still initializing. Try again in a moment.");
+          premiumAlert("Please wait", "Secure login is still initializing. Try again in a moment.");
           return;
         }
         if (!authBridgeRef.current) {
-          Alert.alert("Login", "Phone login is still starting. Wait a second and try again.");
+          premiumAlert("Login", "Phone login is still starting. Wait a second and try again.");
           return;
         }
         await authBridgeRef.current.sendOtp(e164);
       }
       setStep(2);
-      Alert.alert("OTP sent", "Enter the code you received by SMS.");
+      premiumAlert("OTP sent", "Enter the code you received by SMS.");
     } catch (e: any) {
       if (Platform.OS !== "web") {
         authBridgeRef.current?.reset();
@@ -147,7 +148,7 @@ export default function LoginScreen() {
       }
       const code = e?.code ?? "";
       const msg = e?.message || "Could not send OTP";
-      Alert.alert(
+      premiumAlert(
         "OTP failed",
         code ? `${code}\n\n${msg}` : msg,
       );
@@ -160,18 +161,18 @@ export default function LoginScreen() {
     const code = otp.replace(/\s/g, "");
     if (!isDummyOtpPhone10(phone)) {
       if (Platform.OS === "web" && !confirm) {
-        Alert.alert("Session expired", "Please request OTP again.");
+        premiumAlert("Session expired", "Please request OTP again.");
         setStep(1);
         return;
       }
       if (Platform.OS !== "web" && !authBridgeRef.current) {
-        Alert.alert("Session expired", "Please request OTP again.");
+        premiumAlert("Session expired", "Please request OTP again.");
         setStep(1);
         return;
       }
     }
     if (!code) {
-      Alert.alert("OTP required", "Enter the code from SMS.");
+      premiumAlert("OTP required", "Enter the code from SMS.");
       return;
     }
     setLoading(true);
@@ -213,7 +214,7 @@ export default function LoginScreen() {
         });
       }
       if (!res.ok || !res.data) {
-        Alert.alert(
+        premiumAlert(
           res.status === 0 ? "Cannot reach server" : "Login failed",
           res.error || "Unknown error",
         );
@@ -230,7 +231,7 @@ export default function LoginScreen() {
     } catch (e: any) {
       const code = e?.code ?? "";
       const msg = e?.message || "Please try again.";
-      Alert.alert("Invalid OTP", code ? `${code}\n\n${msg}` : msg);
+      premiumAlert("Invalid OTP", code ? `${code}\n\n${msg}` : msg);
     } finally {
       setLoading(false);
     }
@@ -239,19 +240,19 @@ export default function LoginScreen() {
   async function captureLocation() {
     const perm = await Location.requestForegroundPermissionsAsync();
     if (perm.status !== "granted") {
-      Alert.alert("Permission needed", "Allow location access to save delivery address.");
+      premiumAlert("Permission needed", "Allow location access to save delivery address.");
       return;
     }
     const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
     setOnboardLat(pos.coords.latitude);
     setOnboardLng(pos.coords.longitude);
-    Alert.alert("Location captured");
+    premiumAlert("Location captured");
   }
 
   async function pickAvatar() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Permission needed", "Allow gallery access to upload profile photo.");
+      premiumAlert("Permission needed", "Allow gallery access to upload profile photo.");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -267,7 +268,7 @@ export default function LoginScreen() {
 
   async function saveOnboarding() {
     if (!onboardName.trim()) {
-      Alert.alert("Name required", "Please enter your full name.");
+      premiumAlert("Name required", "Please enter your full name.");
       return;
     }
     setSavingOnboard(true);
@@ -277,13 +278,22 @@ export default function LoginScreen() {
         body: JSON.stringify({ name: onboardName.trim() }),
       });
       if (!nameRes.ok) {
-        Alert.alert("Error", nameRes.error || "Could not save name");
+        premiumAlert("Error", nameRes.error || "Could not save name");
         return;
       }
 
       if (onboardAddr.trim()) {
         if (typeof onboardLat !== "number" || typeof onboardLng !== "number") {
-          Alert.alert("Location needed", "Capture location to save address.");
+          premiumAlert("Location needed", "Capture location to save address.");
+          return;
+        }
+        const pinCheck = await validateDeliveryPincode({
+          addressText: onboardAddr.trim(),
+          latitude: onboardLat,
+          longitude: onboardLng,
+        });
+        if (!pinCheck.ok) {
+          premiumAlert("Delivery area", pinCheck.message);
           return;
         }
         const addrRes = await api("/api/user/address", {
@@ -293,10 +303,12 @@ export default function LoginScreen() {
             address: onboardAddr.trim(),
             latitude: onboardLat,
             longitude: onboardLng,
+            pincode: pinCheck.pincode,
+            city: pinCheck.city,
           }),
         });
         if (!addrRes.ok) {
-          Alert.alert("Error", addrRes.error || "Could not save address");
+          premiumAlert("Error", addrRes.error || "Could not save address");
           return;
         }
       }
@@ -319,7 +331,7 @@ export default function LoginScreen() {
           });
           if (!up.ok) {
             const j = (await up.json().catch(() => null)) as any;
-            Alert.alert("Error", j?.error || "Could not upload photo");
+            premiumAlert("Error", j?.error || "Could not upload photo");
             return;
           }
         }

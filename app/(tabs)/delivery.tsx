@@ -5,8 +5,8 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
-  Alert,
-} from "react-native";
+  } from "react-native";
+import { premiumAlert } from "@/lib/premiumAlert";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { api, getToken, getUser } from "@/lib/api";
@@ -68,7 +68,7 @@ export default function DeliveryScreen() {
         const token = await getToken();
         const u = await getUser();
         if (!token || u?.role !== "DELIVERY") {
-          Alert.alert("Delivery only", "Login as delivery partner", [
+          premiumAlert("Delivery only", "Login as delivery partner", [
             { text: "OK", onPress: () => router.replace("/login") },
           ]);
           return;
@@ -85,7 +85,7 @@ export default function DeliveryScreen() {
       method: "POST",
       body: JSON.stringify({ deliveryId: item.id, status: next }),
     });
-    if (!res.ok) Alert.alert("Error", res.error || "Failed");
+    if (!res.ok) premiumAlert("Error", res.error || "Failed");
     await load();
   }
 
