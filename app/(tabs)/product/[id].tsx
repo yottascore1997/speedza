@@ -251,7 +251,7 @@ export default function ProductScreen() {
   const gridGap = 10;
   const colW = (width - G * 2 - gridGap) / 2;
   const heroH = Math.min(Math.round(width * 0.92), Math.round(height * 0.42));
-  const footerReserve = 58 + insets.bottom;
+  const footerReserve = 58;
 
   const syncCartQty = useCallback(async () => {
     const lines = await getCart();
@@ -655,7 +655,7 @@ export default function ProductScreen() {
           borderTopColor: LINE,
           paddingHorizontal: G,
           paddingTop: 10,
-          paddingBottom: 10 + insets.bottom,
+          paddingBottom: 10,
           flexDirection: "row",
           alignItems: "center",
           gap: 12,

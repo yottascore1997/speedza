@@ -163,12 +163,17 @@ export default function CartScreen() {
 
   const itemCount = lines.reduce((s, l) => s + l.quantity, 0);
   const itemsTotal = lines.reduce((s, l) => s + l.price * l.quantity, 0);
+  const subtotalBeforeDiscount = lines.reduce((s, l) => s + (l.mrp ?? l.price) * l.quantity, 0);
   const deliveryFee = deliveryFeeForSubtotal(itemsTotal, deliveryFeePerOrder, lines.length > 0, freeDeliveryMin);
   const total = itemsTotal + deliveryFee + handlingFee;
   const amountToFreeDelivery =
     lines.length > 0 && itemsTotal < freeDeliveryMin ? Math.max(0, freeDeliveryMin - itemsTotal) : 0;
   const discountTotal = totalDiscount(lines);
   const storeId = lines[0]?.storeId;
+
+  function openProduct(productId: string) {
+    router.push(`/product/${productId}`);
+  }
 
   async function changeQty(productId: string, delta: number) {
     const line = lines.find((l) => l.productId === productId);
@@ -267,7 +272,7 @@ export default function CartScreen() {
             style={{ flex: 1 }}
             contentContainerStyle={{
               padding: 16,
-              paddingBottom: 140 + insets.bottom,
+              paddingBottom: 128,
             }}
             showsVerticalScrollIndicator={false}
           >
@@ -305,14 +310,16 @@ export default function CartScreen() {
               return (
                 <View key={item.productId} style={{ ...CARD, padding: 12, marginBottom: 12, borderRadius: 18 }}>
                   <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
-                    <View
-                      style={{
+                    <Pressable
+                      onPress={() => openProduct(item.productId)}
+                      style={({ pressed }) => ({
                         width: CART_LINE_IMAGE,
                         height: CART_LINE_IMAGE,
                         borderRadius: 14,
                         overflow: "hidden",
                         backgroundColor: theme.slateLine,
-                      }}
+                        opacity: pressed ? 0.88 : 1,
+                      })}
                     >
                       {img ? (
                         <Image
@@ -327,12 +334,26 @@ export default function CartScreen() {
                           <MaterialCommunityIcons name="package-variant" size={34} color={theme.textMuted} />
                         </View>
                       )}
-                    </View>
+                    </Pressable>
                     <View style={{ flex: 1, minWidth: 0 }}>
                     <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
-                        <Text style={{ flex: 1, minWidth: 0, fontSize: 20, fontWeight: "900", color: theme.text }} numberOfLines={2}>
-                          {item.name}
-                        </Text>
+                        <Pressable
+                          onPress={() => openProduct(item.productId)}
+                          style={({ pressed }) => ({ flex: 1, minWidth: 0, opacity: pressed ? 0.7 : 1 })}
+                          hitSlop={4}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 14,
+                              lineHeight: 18,
+                              fontWeight: "800",
+                              color: theme.text,
+                            }}
+                            numberOfLines={2}
+                          >
+                            {item.name}
+                          </Text>
+                        </Pressable>
                         <Pressable onPress={() => void removeLine(item.productId)} hitSlop={8} style={{ padding: 2 }}>
                           <MaterialCommunityIcons name="trash-can-outline" size={18} color={theme.textMuted} />
                         </Pressable>
@@ -427,7 +448,7 @@ export default function CartScreen() {
               <View style={{ marginTop: 14, gap: 10 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <Text style={{ color: theme.textMuted, fontWeight: "600" }}>Subtotal</Text>
-                  <Text style={{ color: theme.text, fontWeight: "800" }}>{money(itemsTotal)}</Text>
+                  <Text style={{ color: theme.text, fontWeight: "800" }}>{money(subtotalBeforeDiscount)}</Text>
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <Text style={{ color: theme.textMuted, fontWeight: "600" }}>Delivery Fee</Text>
@@ -460,7 +481,7 @@ export default function CartScreen() {
               position: "absolute",
               left: 16,
               right: 16,
-              bottom: 12 + insets.bottom,
+              bottom: 8,
               borderRadius: 18,
               backgroundColor: "#fff",
               borderWidth: 1,
